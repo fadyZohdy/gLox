@@ -6,6 +6,20 @@ import (
 	scanner "github.com/fadyZohdy/gLox/pkg/scanner"
 )
 
+/*
+   expression     → block ;
+   comma          -> ternary ( (",") ternary )*
+   ternary        -> equality ( "?" expression ":" ternary )? ;
+   equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+   comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+   term           → factor ( ( "-" | "+" ) factor )* ;
+   factor         → unary ( ( "/" | "*" ) unary )* ;
+   unary          → ( "!" | "-" ) unary
+                  | primary ;
+   primary        → NUMBER | STRING | "true" | "false" | "nil"
+               | "(" expression ")" ;
+*/
+
 type Parser struct {
 	tokens         []scanner.Token
 	current        int
@@ -38,7 +52,19 @@ func (p *Parser) Parse() (exprs []Expr, err error) {
 }
 
 func (p *Parser) expression() Expr {
-	return p.ternary()
+	return p.comma()
+}
+
+func (p *Parser) comma() Expr {
+	expr := p.ternary()
+
+	for p.match(scanner.COMMA) {
+		operator := p.previous()
+		right := p.ternary()
+		expr = &Binary{expr, operator, right}
+	}
+
+	return expr
 }
 
 func (p *Parser) ternary() Expr {
