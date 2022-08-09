@@ -7,7 +7,8 @@ import (
 	"log"
 	"os"
 
-	scanner "github.com/fadyZohdy/gLox/pkg/scanner"
+	"github.com/fadyZohdy/gLox/pkg/ast"
+	"github.com/fadyZohdy/gLox/pkg/scanner"
 )
 
 var hadError bool
@@ -55,10 +56,8 @@ func runPrompt() {
 func run(source string) {
 	scanner := scanner.NewScanner(source, error)
 	tokens := scanner.ScanTokens()
-
-	for _, token := range tokens {
-		fmt.Println(token)
-	}
+	parser := ast.NewParser(tokens, report)
+	parser.Parse()
 }
 
 func error(line int, message string) {
