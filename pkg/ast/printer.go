@@ -11,7 +11,9 @@ type AstPrinter struct {
 func (p *AstPrinter) Print(expr Expr) {
 	// clean internal state of the printer
 	p.Repr = ""
-	expr.accept(p)
+	if expr != nil {
+		expr.accept(p)
+	}
 }
 
 func (p *AstPrinter) VisitTernaryExpr(expr *Ternary) {
@@ -43,7 +45,11 @@ func (p *AstPrinter) parenthesize(name string, exprs ...Expr) {
 	p.Repr += "(" + name
 	for _, expr := range exprs {
 		p.Repr += " "
-		expr.accept(p)
+		if expr != nil {
+			expr.accept(p)
+		} else {
+			p.Repr += "nil"
+		}
 	}
 	p.Repr += ")"
 }

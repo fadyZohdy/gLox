@@ -14,10 +14,17 @@ import (
    comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
    term           → factor ( ( "-" | "+" ) factor )* ;
    factor         → unary ( ( "/" | "*" ) unary )* ;
+   erronous_unary → ( "*" | "+", ">", ">=", "<", "<=", "!=", "==" ) unary
+      			  | primary ;
    unary          → ( "!" | "-" ) unary
                   | primary ;
    primary        → NUMBER | STRING | "true" | "false" | "nil"
-               | "(" expression ")" ;
+               	  | "(" expression ")" ;
+				  errors
+			   	  | ( "!=" | "==" ) equality
+           		  | ( ">" | ">=" | "<" | "<=" ) comparison
+           		  | ( "+" ) term
+           		  | ( "/" | "*" ) factor ;
 */
 
 type Parser struct {
@@ -80,7 +87,7 @@ func (p *Parser) ternary() Expr {
 
 func (p *Parser) equality() Expr {
 	expr := p.comparison()
-	for p.match(scanner.EQUAL, scanner.EQUAL_EQUAL) {
+	for p.match(scanner.BANG_EQUAL, scanner.EQUAL_EQUAL) {
 		operator := p.previous()
 		right := p.comparison()
 		expr = &Binary{expr, operator, right}
@@ -146,6 +153,34 @@ func (p *Parser) primary() Expr {
 		expr := p.expression()
 		p.consume(scanner.RIGHT_PAREN, "Expect ') after expression.")
 		return &Grouping{expr}
+	}
+
+	if p.match(scanner.BANG_EQUAL, scanner.EQUAL_EQUAL) {
+		operator := p.previous()
+		p.comparison()
+		p.error(operator, "missing left hand operand")
+		return nil
+	}
+
+	if p.match(scanner.GREATER, scanner.GREATER_EQUAL, scanner.LESS, scanner.LESS_EQUAL) {
+		operator := p.previous()
+		p.term()
+		p.error(operator, "missing left hand operand")
+		return nil
+	}
+
+	if p.match(scanner.PLUS) {
+		operator := p.previous()
+		p.factor()
+		p.error(operator, "missing left hand operand")
+		return nil
+	}
+
+	if p.match(scanner.STAR, scanner.SLASH) {
+		operator := p.previous()
+		p.unary()
+		p.error(operator, "missing left hand operand")
+		return nil
 	}
 
 	p.error(p.peek(), "Expect expression.")
