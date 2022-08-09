@@ -162,7 +162,7 @@ func (s *Scanner) scan_number() {
 	if err != nil {
 		s.error_reporter(s.line, err.Error())
 	}
-	s.addTokenWithLiteral(Number, LoxFloat64(f))
+	s.addTokenWithLiteral(Number, f)
 }
 
 func (s *Scanner) scan_identifier() {

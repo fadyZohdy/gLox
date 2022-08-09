@@ -13,11 +13,11 @@ func TestPrinter(t *testing.T) {
 	}{
 		{&Binary{
 			&Unary{
-				scanner.Token{scanner.MINUS, "-", nil, 1},
-				&Literal{scanner.LoxFloat64(123)}},
-			scanner.Token{scanner.STAR, "*", nil, 1},
+				scanner.Token{Type: scanner.MINUS, Lexeme: "-", Literal: nil, Line: 1},
+				&Literal{123}},
+			scanner.Token{Type: scanner.STAR, Lexeme: "*", Literal: nil, Line: 1},
 			&Grouping{
-				&Literal{scanner.LoxFloat64(45.67)}}}, "(* (- 123) (group 45.67))"},
+				&Literal{45.67}}}, "(* (- 123) (group 45.67))"},
 	}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
