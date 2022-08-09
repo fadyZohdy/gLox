@@ -33,7 +33,7 @@ type Scanner struct {
 }
 
 func NewScanner(source string, error func(int, string)) *Scanner {
-	return &Scanner{source: source, error_reporter: error, line: 1}
+	return &Scanner{source: source, error_reporter: error, line: 1, tokens: make([]Token, 0, len(source))}
 }
 
 func (s *Scanner) ScanTokens() []Token {
@@ -72,6 +72,10 @@ func (s *Scanner) scanToken() {
 		s.addToken(STAR)
 	case '%':
 		s.addToken(MODULO)
+	case '?':
+		s.addToken(QUESTION_MARK)
+	case ':':
+		s.addToken(COLON)
 	case '!':
 		if s.match('=') {
 			s.addToken(BANG_EQUAL)

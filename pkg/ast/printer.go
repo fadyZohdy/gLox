@@ -14,6 +14,10 @@ func (p *AstPrinter) Print(expr Expr) {
 	expr.accept(p)
 }
 
+func (p *AstPrinter) VisitTernaryExpr(expr *Ternary) {
+	p.parenthesize("?", expr.condition, expr.trueBranch, expr.falseBranch)
+}
+
 func (p *AstPrinter) VisitBinaryExpr(expr *Binary) {
 	p.parenthesize(expr.operator.Lexeme,
 		expr.left, expr.right)

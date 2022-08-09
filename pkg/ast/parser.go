@@ -38,7 +38,18 @@ func (p *Parser) Parse() (exprs []Expr, err error) {
 }
 
 func (p *Parser) expression() Expr {
-	return p.equality()
+	return p.ternary()
+}
+
+func (p *Parser) ternary() Expr {
+	expr := p.equality()
+	if p.match(scanner.QUESTION_MARK) {
+		trueBranch := p.expression()
+		p.consume(scanner.COLON, "Expect ':' after true branch of ternary expression")
+		falseBranch := p.ternary()
+		expr = &Ternary{expr, trueBranch, falseBranch}
+	}
+	return expr
 }
 
 func (p *Parser) equality() Expr {

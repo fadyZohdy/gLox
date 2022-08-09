@@ -7,10 +7,19 @@ type Expr interface {
 }
 
 type Visitor interface {
+	VisitTernaryExpr(expr *Ternary)
 	VisitBinaryExpr(expr *Binary)
 	VisitGroupingExpr(expr *Grouping)
 	VisitLiteralExpr(expr *Literal)
 	VisitUnaryExpr(expr *Unary)
+}
+
+type Ternary struct {
+	condition, trueBranch, falseBranch Expr
+}
+
+func (expr *Ternary) accept(visitor Visitor) {
+	visitor.VisitTernaryExpr(expr)
 }
 
 type Binary struct {

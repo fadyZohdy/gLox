@@ -15,6 +15,7 @@ func TestParser(t *testing.T) {
 		{"1 + 2 * 3 / 4 + 15.1 - \"test\"", "(- (+ (+ 1 (/ (* 2 3) 4)) 15.1) test)"},
 		{"1 == 2 > 3 / 4 + 5 % 6", "(== 1 (> 2 (+ (/ 3 4) (% 5 6))))"},
 		{"!true == false", "(== (! true) false)"},
+		{"4 > 3 ? 1 : 2", "(? (> 4 3) 1 2)"},
 	}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {

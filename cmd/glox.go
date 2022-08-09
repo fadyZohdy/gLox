@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
 
 	"github.com/fadyZohdy/gLox/pkg/ast"
 	"github.com/fadyZohdy/gLox/pkg/scanner"
@@ -14,12 +15,16 @@ import (
 var hadError bool
 
 func main() {
-	if len(os.Args) > 2 {
-		log.Println("Usage: jlox [script]")
-	} else if len(os.Args) == 2 {
-		runFile(os.Args[1])
-	} else {
+	// f, err := os.Create("cpu.prof")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// pprof.StartCPUProfile(f)
+	// defer pprof.StopCPUProfile()
+	if len(os.Args) == 1 {
 		runPrompt()
+	} else {
+		runFile(os.Args[1])
 	}
 }
 
@@ -54,10 +59,16 @@ func runPrompt() {
 }
 
 func run(source string) {
+	// TODO: check why slow
+	t1 := time.Now().UnixNano() / int64(time.Millisecond)
 	scanner := scanner.NewScanner(source, error)
 	tokens := scanner.ScanTokens()
+	t2 := time.Now().UnixNano() / int64(time.Millisecond)
+	fmt.Println("scanner: ", t2-t1)
 	parser := ast.NewParser(tokens, report)
 	parser.Parse()
+	t3 := time.Now().UnixNano() / int64(time.Millisecond)
+	fmt.Println("Parser: ", t3-t2)
 }
 
 func error(line int, message string) {
