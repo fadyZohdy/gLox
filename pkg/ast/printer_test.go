@@ -22,9 +22,9 @@ func TestPrinter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
 			p := &AstPrinter{}
-			p.Print(tt.input)
-			if p.Repr != tt.expected {
-				t.Errorf("AstPrinter.Print(%v). got = %s, want %s", tt.input, p.Repr, tt.expected)
+			res := p.Print(tt.input)
+			if res != tt.expected {
+				t.Errorf("AstPrinter.Print(%v). got = %s, want %s", tt.input, res, tt.expected)
 			}
 		})
 	}

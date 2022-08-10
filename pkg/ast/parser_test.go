@@ -28,9 +28,9 @@ func TestParser(t *testing.T) {
 			parser := NewParser(tokens, func(l int, w, m string) { log.Println("[line ", l, "] Error", w, ": ", m) })
 			exprs, _ := parser.Parse()
 			printer := &AstPrinter{}
-			printer.Print(exprs[0])
-			if printer.Repr != tt.expected {
-				t.Errorf("AstPrinter.Print(%v). got = %s, want %s", tt.input, printer.Repr, tt.expected)
+			res := printer.Print(exprs[0])
+			if res != tt.expected {
+				t.Errorf("AstPrinter.Print(%v). got = %s, want %s", tt.input, res, tt.expected)
 			}
 		})
 	}

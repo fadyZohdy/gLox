@@ -4,52 +4,55 @@ import (
 	"fmt"
 )
 
-type AstPrinter struct {
-	Repr string
-}
+type AstPrinter struct{}
 
-func (p *AstPrinter) Print(expr Expr) {
+func (p *AstPrinter) Print(expr Expr) string {
 	// clean internal state of the printer
-	p.Repr = ""
-	if expr != nil {
-		expr.accept(p)
+	res := expr.accept(p)
+	if res_s, ok := res.(string); ok {
+		return res_s
 	}
+	return ""
 }
 
-func (p *AstPrinter) VisitTernaryExpr(expr *Ternary) {
-	p.parenthesize("?", expr.condition, expr.trueBranch, expr.falseBranch)
+func (p *AstPrinter) VisitTernaryExpr(expr *Ternary) any {
+	return p.parenthesize("?", expr.condition, expr.trueBranch, expr.falseBranch)
 }
 
-func (p *AstPrinter) VisitBinaryExpr(expr *Binary) {
-	p.parenthesize(expr.operator.Lexeme,
+func (p *AstPrinter) VisitBinaryExpr(expr *Binary) any {
+	return p.parenthesize(expr.operator.Lexeme,
 		expr.left, expr.right)
 }
 
-func (p *AstPrinter) VisitGroupingExpr(expr *Grouping) {
-	p.parenthesize("group", expr.expression)
+func (p *AstPrinter) VisitGroupingExpr(expr *Grouping) any {
+	return p.parenthesize("group", expr.expression)
 }
 
-func (p *AstPrinter) VisitUnaryExpr(expr *Unary) {
-	p.parenthesize(expr.operator.Lexeme, expr.right)
+func (p *AstPrinter) VisitUnaryExpr(expr *Unary) any {
+	return p.parenthesize(expr.operator.Lexeme, expr.right)
 }
 
-func (p *AstPrinter) VisitLiteralExpr(expr *Literal) {
-	if expr.value == nil {
-		p.Repr += "nil"
-	} else {
-		p.Repr += fmt.Sprintf("%v", expr.value)
+func (p *AstPrinter) VisitLiteralExpr(expr *Literal) any {
+	if expr.value != nil {
+		return fmt.Sprintf("%v", expr.value)
 	}
+	return "nil"
 }
 
-func (p *AstPrinter) parenthesize(name string, exprs ...Expr) {
-	p.Repr += "(" + name
+func (p *AstPrinter) parenthesize(name string, exprs ...Expr) any {
+	s := ""
+	s += "(" + name
 	for _, expr := range exprs {
-		p.Repr += " "
+		s += " "
 		if expr != nil {
-			expr.accept(p)
+			ss := expr.accept(p)
+			if sss, ok := ss.(string); ok {
+				s += sss
+			}
 		} else {
-			p.Repr += "nil"
+			s += "nil"
 		}
 	}
-	p.Repr += ")"
+	s += ")"
+	return s
 }

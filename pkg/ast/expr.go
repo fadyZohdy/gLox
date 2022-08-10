@@ -7,15 +7,15 @@ import (
 )
 
 type Expr interface {
-	accept(visitor Visitor)
+	accept(visitor Visitor) any
 }
 
 type Visitor interface {
-	VisitTernaryExpr(expr *Ternary)
-	VisitBinaryExpr(expr *Binary)
-	VisitGroupingExpr(expr *Grouping)
-	VisitLiteralExpr(expr *Literal)
-	VisitUnaryExpr(expr *Unary)
+	VisitTernaryExpr(expr *Ternary) any
+	VisitBinaryExpr(expr *Binary) any
+	VisitGroupingExpr(expr *Grouping) any
+	VisitLiteralExpr(expr *Literal) any
+	VisitUnaryExpr(expr *Unary) any
 }
 
 type Ternary struct {
@@ -26,8 +26,8 @@ func (expr *Ternary) String() string {
 	return fmt.Sprintf("(?: %v ? %v : %v)", expr.condition, expr.trueBranch, expr.falseBranch)
 }
 
-func (expr *Ternary) accept(visitor Visitor) {
-	visitor.VisitTernaryExpr(expr)
+func (expr *Ternary) accept(visitor Visitor) any {
+	return visitor.VisitTernaryExpr(expr)
 }
 
 type Binary struct {
@@ -36,8 +36,8 @@ type Binary struct {
 	right    Expr
 }
 
-func (expr *Binary) accept(visitor Visitor) {
-	visitor.VisitBinaryExpr(expr)
+func (expr *Binary) accept(visitor Visitor) any {
+	return visitor.VisitBinaryExpr(expr)
 }
 
 func (expr *Binary) String() string {
@@ -48,8 +48,8 @@ type Grouping struct {
 	expression Expr
 }
 
-func (expr *Grouping) accept(visitor Visitor) {
-	visitor.VisitGroupingExpr(expr)
+func (expr *Grouping) accept(visitor Visitor) any {
+	return visitor.VisitGroupingExpr(expr)
 }
 
 func (expr *Grouping) String() string {
@@ -61,8 +61,8 @@ type Unary struct {
 	right    Expr
 }
 
-func (expr *Unary) accept(visitor Visitor) {
-	visitor.VisitUnaryExpr(expr)
+func (expr *Unary) accept(visitor Visitor) any {
+	return visitor.VisitUnaryExpr(expr)
 }
 
 func (expr *Unary) String() string {
@@ -73,8 +73,8 @@ type Literal struct {
 	value interface{}
 }
 
-func (expr *Literal) accept(visitor Visitor) {
-	visitor.VisitLiteralExpr(expr)
+func (expr *Literal) accept(visitor Visitor) any {
+	return visitor.VisitLiteralExpr(expr)
 }
 
 func (expr *Literal) String() string {
