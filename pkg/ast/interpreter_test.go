@@ -30,7 +30,7 @@ func TestInterpreter(t *testing.T) {
 		{"compare value with nil", "1 == nil", false, nil},
 		{"test negation + compare nil with nil", "!(nil == nil)", false, nil},
 		{"test division by zero", "1 / 0", nil,
-			RuntimeError{Message: "Division by zero.", Token: scanner.Token{Type: scanner.SLASH, Literal: "/", Line: 1}}},
+			RuntimeError{Message: "division by zero", Token: scanner.Token{Type: scanner.SLASH, Literal: "/", Line: 1}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -38,12 +38,12 @@ func TestInterpreter(t *testing.T) {
 			tokens := s.ScanTokens()
 			parser := NewParser(tokens, func(l int, w, m string) { log.Println("[line ", l, "] Error", w, ": ", m) })
 			exprs, _ := parser.Parse()
-			interpreter := NewInterpreter(func(err RuntimeError) { log.Println(err.Message, "[line ", err.Token.Line, "]") })
+			interpreter := NewInterpreter(func(err *RuntimeError) { log.Println(err.Message, "[line ", err.Token.Line, "]") })
 			res, err := interpreter.Interpret(exprs[0])
 			if res != tt.expected {
 				t.Errorf("Interpreter.interpret(%v). got = %s, want %s", tt.input, res, tt.expected)
 			}
-			if _, ok := err.(RuntimeError); !ok && tt.err != nil {
+			if _, ok := err.(*RuntimeError); !ok && tt.err != nil {
 				t.Errorf("Interpreter.interpret(%v). got = %v, want %v", tt.input, err, tt.err)
 			}
 		})

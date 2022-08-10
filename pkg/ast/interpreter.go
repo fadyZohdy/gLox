@@ -2,15 +2,16 @@ package ast
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/fadyZohdy/gLox/pkg/scanner"
 )
 
 type Interpreter struct {
-	error_reporter func(error RuntimeError)
+	error_reporter func(error *RuntimeError)
 }
 
-func NewInterpreter(error_reporter func(error RuntimeError)) *Interpreter {
+func NewInterpreter(error_reporter func(error *RuntimeError)) *Interpreter {
 	return &Interpreter{error_reporter}
 }
 
@@ -21,9 +22,10 @@ func (i *Interpreter) Interpret(expr Expr) (value any, err error) {
 			// no panic error
 			return
 		}
-		if e, ok := e.(RuntimeError); ok {
+		if e, ok := e.(*RuntimeError); ok {
 			// err panic occurred
 			err = e
+
 			i.error_reporter(e)
 		}
 	}()
@@ -75,27 +77,34 @@ func (i *Interpreter) VisitBinaryExpr(expr *Binary) any {
 	case scanner.SLASH:
 		right := checkNumber(right, expr.operator)
 		if right == 0 {
-			panic(RuntimeError{Message: "Division by zero.", Token: expr.operator})
+			panicWithToken(DivisionByZeroError, expr.operator)
 		}
 		return checkNumber(left, expr.operator) / right
+	case scanner.MODULO:
+		right := checkNumber(right, expr.operator)
+		if right == 0 {
+			panicWithToken(DivisionByZeroError, expr.operator)
+		}
+		return math.Mod(checkNumber(left, expr.operator), right)
 	case scanner.PLUS:
 		if isNumber(left) && isNumber(right) {
 			return checkNumber(left, expr.operator) + checkNumber(right, expr.operator)
 		} else if isString(left) && isString(right) {
-			return checkString(left) + checkString(right)
+			return checkString(left, expr.operator) + checkString(right, expr.operator)
 		} else {
 			if isNumber(left) && isString(right) {
-				return fmt.Sprintf("%v", checkNumber(left, expr.operator)) + checkString(right)
+				return fmt.Sprintf("%v", checkNumber(left, expr.operator)) + checkString(right, expr.operator)
 			}
 			if isString(left) && isNumber(right) {
-				return checkString(left) + fmt.Sprintf("%v", checkNumber(right, expr.operator))
+				return checkString(left, expr.operator) + fmt.Sprintf("%v", checkNumber(right, expr.operator))
 			}
-			panic(RuntimeError{Message: "operands can be numbers or strings", Token: expr.operator})
+			panicWithToken(OnlyStringOrNumberError, expr.operator)
 		}
 	case scanner.COMMA:
 		return right
 	}
-	panic(RuntimeError{Message: "Unknown operator.", Token: expr.operator})
+	panicWithToken(UnknownOperatorError, expr.operator)
+	return nil
 }
 
 func (i *Interpreter) VisitTernaryExpr(expr *Ternary) any {
@@ -107,16 +116,22 @@ func (i *Interpreter) VisitTernaryExpr(expr *Ternary) any {
 			return i.evaluate(expr.falseBranch)
 		}
 	} else {
-		panic(RuntimeError{Message: "Ternary condition value is not a boolean."})
+		panic(&RuntimeError{Message: "ternary condition value is not a boolean"})
 	}
 }
 
-func checkNumber(value any, token scanner.Token) float64 {
+func panicWithToken(e *RuntimeError, token scanner.Token) {
+	e.Token = token
+	panic(e)
+}
+
+func checkNumber(value any, token scanner.Token) (f float64) {
 	if value_f, ok := value.(float64); ok {
-		return value_f
+		f = value_f
 	} else {
-		panic(RuntimeError{Message: "Operand must be a number.", Token: scanner.Token{}})
+		panicWithToken(NotNumberError, token)
 	}
+	return
 }
 
 func isNumber(value any) bool {
@@ -124,12 +139,13 @@ func isNumber(value any) bool {
 	return ok
 }
 
-func checkString(value any) string {
+func checkString(value any, token scanner.Token) (s string) {
 	if value_s, ok := value.(string); ok {
-		return value_s
+		s = value_s
 	} else {
-		panic(RuntimeError{Message: "Operand must be a string.", Token: scanner.Token{}})
+		panicWithToken(NotStringError, token)
 	}
+	return
 }
 
 func isString(value any) bool {

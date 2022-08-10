@@ -63,6 +63,12 @@ func runPrompt() {
 }
 
 func run(source string) {
+	// f, err := os.Create("cpu.profile")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// pprof.StartCPUProfile(f)
+	// defer pprof.StopCPUProfile()
 	// t1 := time.Now().UnixNano() / int64(time.Millisecond)
 	scanner := scanner.NewScanner(source, error)
 	tokens := scanner.ScanTokens()
@@ -72,10 +78,10 @@ func run(source string) {
 	exprs, _ := parser.Parse()
 	// t3 := time.Now().UnixNano() / int64(time.Millisecond)
 	// fmt.Println("Parser: ", t3-t2)
-	interpreter := ast.NewInterpreter()
+	interpreter := ast.NewInterpreter(runtimeError)
 	for _, expr := range exprs {
-		v, _ := interpreter.Interpret(expr)
-		fmt.Println(v)
+		interpreter.Interpret(expr)
+		// fmt.Println(v)
 	}
 	// t4 := time.Now().UnixNano() / int64(time.Millisecond)
 	// fmt.Println("Interpreter: ", t4-t3)
@@ -85,8 +91,8 @@ func error(line int, message string) {
 	report(line, "", message)
 }
 
-func runtimeError(err ast.RuntimeError) {
-	log.Println(err.Message, "\n[line ", err.Token.Line, "]")
+func runtimeError(err *ast.RuntimeError) {
+	log.Println(err.Message, "[line ", err.Token.Line, "]")
 	hadRuntimeError = true
 }
 
