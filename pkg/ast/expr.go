@@ -1,33 +1,9 @@
 package ast
 
-import (
-	"fmt"
-
-	"github.com/fadyZohdy/gLox/pkg/scanner"
-)
+import "github.com/fadyZohdy/gLox/pkg/scanner"
 
 type Expr interface {
 	accept(visitor Visitor) any
-}
-
-type Visitor interface {
-	VisitTernaryExpr(expr *Ternary) any
-	VisitBinaryExpr(expr *Binary) any
-	VisitGroupingExpr(expr *Grouping) any
-	VisitLiteralExpr(expr *Literal) any
-	VisitUnaryExpr(expr *Unary) any
-}
-
-type Ternary struct {
-	condition, trueBranch, falseBranch Expr
-}
-
-func (expr *Ternary) String() string {
-	return fmt.Sprintf("(?: %v ? %v : %v)", expr.condition, expr.trueBranch, expr.falseBranch)
-}
-
-func (expr *Ternary) accept(visitor Visitor) any {
-	return visitor.VisitTernaryExpr(expr)
 }
 
 type Binary struct {
@@ -40,10 +16,6 @@ func (expr *Binary) accept(visitor Visitor) any {
 	return visitor.VisitBinaryExpr(expr)
 }
 
-func (expr *Binary) String() string {
-	return fmt.Sprintf("(%v %v %v)", expr.left, expr.operator.Lexeme, expr.right)
-}
-
 type Grouping struct {
 	expression Expr
 }
@@ -52,8 +24,12 @@ func (expr *Grouping) accept(visitor Visitor) any {
 	return visitor.VisitGroupingExpr(expr)
 }
 
-func (expr *Grouping) String() string {
-	return fmt.Sprintf("(%v)", expr.expression)
+type Literal struct {
+	value interface{}
+}
+
+func (expr *Literal) accept(visitor Visitor) any {
+	return visitor.VisitLiteralExpr(expr)
 }
 
 type Unary struct {
@@ -65,18 +41,29 @@ func (expr *Unary) accept(visitor Visitor) any {
 	return visitor.VisitUnaryExpr(expr)
 }
 
-func (expr *Unary) String() string {
-	return fmt.Sprintf("(%v %v)", expr.operator.Lexeme, expr.right)
+type Ternary struct {
+	condition   Expr
+	trueBranch  Expr
+	falseBranch Expr
 }
 
-type Literal struct {
-	value interface{}
+func (expr *Ternary) accept(visitor Visitor) any {
+	return visitor.VisitTernaryExpr(expr)
 }
 
-func (expr *Literal) accept(visitor Visitor) any {
-	return visitor.VisitLiteralExpr(expr)
+type Variable struct {
+	name scanner.Token
 }
 
-func (expr *Literal) String() string {
-	return fmt.Sprintf("%v", expr.value)
+func (expr *Variable) accept(visitor Visitor) any {
+	return visitor.VisitVariableExpr(expr)
+}
+
+type Assign struct {
+	name  scanner.Token
+	value Expr
+}
+
+func (expr *Assign) accept(visitor Visitor) any {
+	return visitor.VisitAssignExpr(expr)
 }

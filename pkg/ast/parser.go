@@ -1,31 +1,8 @@
 package ast
 
 import (
-	"errors"
-
 	scanner "github.com/fadyZohdy/gLox/pkg/scanner"
 )
-
-/*
-   expression     → block ;
-   comma          -> ternary ( (",") ternary )*
-   ternary        -> equality ( "?" expression ":" ternary )? ;
-   equality       → comparison ( ( "!=" | "==" ) comparison )* ;
-   comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-   term           → factor ( ( "-" | "+" ) factor )* ;
-   factor         → unary ( ( "/" | "*" ) unary )* ;
-   erronous_unary → ( "*" | "+", ">", ">=", "<", "<=", "!=", "==" ) unary
-      			  | primary ;
-   unary          → ( "!" | "-" ) unary
-                  | primary ;
-   primary        → NUMBER | STRING | "true" | "false" | "nil"
-               	  | "(" expression ")" ;
-				  errors
-			   	  | ( "!=" | "==" ) equality
-           		  | ( ">" | ">=" | "<" | "<=" ) comparison
-           		  | ( "+" ) term
-           		  | ( "/" | "*" ) factor ;
-*/
 
 type Parser struct {
 	tokens         []scanner.Token
@@ -37,29 +14,102 @@ func NewParser(tokens []scanner.Token, error_reporter func(int, string, string))
 	return &Parser{tokens: tokens, error_reporter: error_reporter}
 }
 
-func (p *Parser) Parse() (exprs []Expr, err error) {
-	defer func() {
+func (p *Parser) Parse() (stmts []Stmt, err error) {
+	defer func() (err error) {
 		e := recover()
-		if e == nil {
-			// no panic error
-			return
-		}
 		if e, ok := e.(error); ok {
 			// err panic occurred
 			err = e
 		}
+		return
 	}()
 
+	stmts = make([]Stmt, 0, len(p.tokens))
+
 	for !p.isAtEnd() {
-		expr := p.expression()
-		exprs = append(exprs, expr)
+		stmt := p.declaration()
+		stmts = append(stmts, stmt)
 	}
 
 	return
 }
 
+func (p *Parser) declaration() Stmt {
+	defer func() {
+		e := recover()
+		if e != nil {
+			if _, ok := e.(ParseError); ok {
+				p.synchronize()
+				return
+			} else {
+				panic(e)
+			}
+		}
+	}()
+
+	if p.match(scanner.VAR) {
+		return p.varDeclaration()
+	}
+	return p.statement()
+}
+
+func (p *Parser) varDeclaration() Stmt {
+	ident := p.consume(scanner.IDENTIFIER, "expect variable name")
+	var initializer Expr
+	if p.match(scanner.EQUAL) {
+		initializer = p.expression()
+	}
+	p.consume(scanner.SEMICOLON, "expect ';' after variable declaration")
+	return &Var{ident, initializer}
+}
+
+func (p *Parser) statement() Stmt {
+	if p.match(scanner.PRINT) {
+		return p.printStatement()
+	}
+
+	if p.match(scanner.LEFT_BRACE) {
+		return &Block{p.block()}
+	}
+
+	return p.expressionStatement()
+}
+
+func (p *Parser) block() (stmts []Stmt) {
+	for !p.isAtEnd() && !p.check(scanner.RIGHT_BRACE) {
+		stmts = append(stmts, p.declaration())
+	}
+	p.consume(scanner.RIGHT_BRACE, "expect '}' at end of block")
+	return
+}
+
+func (p *Parser) printStatement() Stmt {
+	expr := p.expression()
+	p.consume(scanner.SEMICOLON, "expect ';' after expression")
+	return &Print{expression: expr}
+}
+
+func (p *Parser) expressionStatement() Stmt {
+	expr := p.expression()
+	p.consume(scanner.SEMICOLON, "expect ';' after expression")
+	return &Expression{expression: expr}
+}
+
 func (p *Parser) expression() Expr {
-	return p.comma()
+	return p.assignment()
+}
+
+func (p *Parser) assignment() Expr {
+	expr := p.comma()
+	if p.match(scanner.EQUAL) {
+		equals := p.previous()
+		right := p.assignment()
+		if variable, ok := expr.(*Variable); ok {
+			return &Assign{variable.name, right}
+		}
+		p.error_reporter(equals.Line, "", "invalid assignment target")
+	}
+	return expr
 }
 
 func (p *Parser) comma() Expr {
@@ -149,6 +199,10 @@ func (p *Parser) primary() Expr {
 		return &Literal{p.previous().Literal}
 	}
 
+	if p.match(scanner.IDENTIFIER) {
+		return &Variable{p.previous()}
+	}
+
 	if p.match(scanner.LEFT_PAREN) {
 		expr := p.expression()
 		p.consume(scanner.RIGHT_PAREN, "Expect ') after expression.")
@@ -184,7 +238,7 @@ func (p *Parser) primary() Expr {
 	}
 
 	p.error(p.peek(), "Expect expression.")
-	panic(errors.New("parse error"))
+	panic(ParseErrorObj)
 }
 
 func (p *Parser) match(types ...scanner.TokenType) bool {
@@ -203,7 +257,7 @@ func (p *Parser) consume(tokenType scanner.TokenType, error_msg string) scanner.
 		return p.advance()
 	}
 	p.error(p.peek(), error_msg)
-	panic(errors.New("parse error"))
+	panic(ParseErrorObj)
 }
 
 func (p *Parser) check(tokenType scanner.TokenType) bool {
@@ -237,5 +291,36 @@ func (p *Parser) error(token scanner.Token, message string) {
 		p.error_reporter(token.Line, " at end", message)
 	} else {
 		p.error_reporter(token.Line, " at '"+token.Lexeme+"'", message)
+	}
+}
+
+func (p *Parser) synchronize() {
+	p.advance()
+
+	for !p.isAtEnd() {
+		if p.previous().Type == scanner.SEMICOLON {
+			return
+		}
+
+		switch p.peek().Type {
+		case scanner.CLASS:
+			return
+		case scanner.FUN:
+			return
+		case scanner.VAR:
+			return
+		case scanner.FOR:
+			return
+		case scanner.IF:
+			return
+		case scanner.WHILE:
+			return
+		case scanner.PRINT:
+			return
+		case scanner.RETURN:
+			return
+		}
+
+		p.advance()
 	}
 }

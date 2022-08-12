@@ -1,0 +1,37 @@
+
+program             → declaration* EOF
+
+declaration         → varDecl
+                    | statement
+
+varDecl             → "var" IDENTIFIER ( "=" expression )? ";"
+
+statement           → exprStmt
+                    | printStmt
+                    | block
+
+exprStmt            → expression ";"
+printStmt           → "print" expression ";"
+block               → "{" declaration* "}"
+
+expression          →  assignment
+assignment          → IDENTIFIER "=" assignment
+                    | comma ;
+comma               -> ternary ( (",") ternary )*
+ternary             -> equality ( "?" expression ":" ternary )?
+equality            → comparison ( ( "!=" | "==" ) comparison )*
+comparison          → term ( ( ">" | ">=" | "<" | "<=" ) term )*
+term                → factor ( ( "-" | "+" ) factor )*
+factor              → unary ( ( "/" | "*" ) unary )*
+erronous_unary      → ( "*" | "+", ">", ">=", "<", "<=", "!=", "==" ) unary
+   			        | primary
+unary               → ( "!" | "-" ) unary
+                    | primary
+primary             → NUMBER | STRING | "true" | "false" | "nil"
+               	    | "(" expression ")"
+				    | IDENTIFIER ;
+				    errors
+			   	    | ( "!=" | "==" ) equality
+           		    | ( ">" | ">=" | "<" | "<=" ) comparison
+           		    | ( "+" ) term
+           		    | ( "/" | "*" ) factor

@@ -15,6 +15,30 @@ func (p *AstPrinter) Print(expr Expr) string {
 	return ""
 }
 
+func (p *AstPrinter) VisitVarStmt(stmt *Var) any {
+	return p.parenthesize(fmt.Sprintf("var %s", stmt.name.Lexeme), stmt.initializer)
+}
+
+func (p *AstPrinter) VisitVariableExpr(expr *Variable) any {
+	return expr.name.Lexeme
+}
+
+func (p *AstPrinter) VisitExpressionStmt(expr *Expression) any {
+	return expr.expression.accept(p)
+}
+
+func (p *AstPrinter) VisitBlockStmt(stmt *Block) any {
+	return "block"
+}
+
+func (p *AstPrinter) VisitPrintStmt(expr *Print) any {
+	return p.parenthesize("print", expr.expression)
+}
+
+func (p *AstPrinter) VisitAssignExpr(expr *Assign) any {
+	return p.parenthesize(expr.name.Lexeme+" = ", expr.value)
+}
+
 func (p *AstPrinter) VisitTernaryExpr(expr *Ternary) any {
 	return p.parenthesize("?", expr.condition, expr.trueBranch, expr.falseBranch)
 }

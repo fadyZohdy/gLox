@@ -75,14 +75,15 @@ func run(source string) {
 	// t2 := time.Now().UnixNano() / int64(time.Millisecond)
 	// fmt.Println("scanner: ", t2-t1)
 	parser := ast.NewParser(tokens, report)
-	exprs, _ := parser.Parse()
+	stmts, err := parser.Parse()
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	// t3 := time.Now().UnixNano() / int64(time.Millisecond)
 	// fmt.Println("Parser: ", t3-t2)
 	interpreter := ast.NewInterpreter(runtimeError)
-	for _, expr := range exprs {
-		interpreter.Interpret(expr)
-		// fmt.Println(v)
-	}
+	interpreter.Interpret(stmts)
 	// t4 := time.Now().UnixNano() / int64(time.Millisecond)
 	// fmt.Println("Interpreter: ", t4-t3)
 }

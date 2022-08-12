@@ -9,19 +9,17 @@ import (
 
 type Interpreter struct {
 	error_reporter func(error *RuntimeError)
+	env            *Environment
 }
 
 func NewInterpreter(error_reporter func(error *RuntimeError)) *Interpreter {
-	return &Interpreter{error_reporter}
+	return &Interpreter{error_reporter, NewEnvironment(nil)}
 }
 
-func (i *Interpreter) Interpret(expr Expr) (value any, err error) {
+func (i *Interpreter) Interpret(stmts []Stmt) (err error) {
+	// TODO: should we reset environment here ?!!
 	defer func() {
 		e := recover()
-		if e == nil {
-			// no panic error
-			return
-		}
 		if e, ok := e.(*RuntimeError); ok {
 			// err panic occurred
 			err = e
@@ -30,8 +28,22 @@ func (i *Interpreter) Interpret(expr Expr) (value any, err error) {
 		}
 	}()
 
-	value = i.evaluate(expr)
+	for _, stmt := range stmts {
+		i.execute(stmt)
+	}
+
 	return
+}
+
+func (i *Interpreter) execute(stmt Stmt) {
+	stmt.accept(i)
+}
+
+func (i *Interpreter) evaluate(expr Expr) any {
+	if expr == nil {
+		return nil
+	}
+	return expr.accept(i)
 }
 
 func (i *Interpreter) VisitLiteralExpr(expr *Literal) any {
@@ -120,6 +132,54 @@ func (i *Interpreter) VisitTernaryExpr(expr *Ternary) any {
 	}
 }
 
+func (i *Interpreter) VisitVariableExpr(expr *Variable) any {
+	return i.env.get(expr.name)
+}
+
+func (i *Interpreter) VisitVarStmt(stmt *Var) any {
+	var value any
+	if stmt.initializer != nil {
+		value = i.evaluate(stmt.initializer)
+	}
+	i.env.define(stmt.name.Lexeme, value)
+	return nil
+}
+
+func (i *Interpreter) VisitExpressionStmt(stmt *Expression) any {
+	i.evaluate(stmt.expression)
+	return nil
+}
+
+func (i *Interpreter) VisitPrintStmt(stmt *Print) any {
+	value := i.evaluate(stmt.expression)
+	fmt.Println(value)
+	return nil
+}
+
+func (i *Interpreter) VisitAssignExpr(expr *Assign) any {
+	value := i.evaluate(expr.value)
+	i.env.assign(expr.name, value)
+	return value
+}
+
+func (i *Interpreter) VisitBlockStmt(block *Block) any {
+	i.executeBlock(block)
+	return nil
+}
+
+func (i *Interpreter) executeBlock(block *Block) {
+	prevEnv := i.env
+
+	defer func() {
+		i.env = prevEnv
+	}()
+
+	i.env = NewEnvironment(prevEnv)
+	for _, stmt := range block.statements {
+		i.execute(stmt)
+	}
+}
+
 func panicWithToken(e *RuntimeError, token scanner.Token) {
 	e.Token = token
 	panic(e)
@@ -161,13 +221,6 @@ func isEqual(left, right any) bool {
 		return false
 	}
 	return left == right
-}
-
-func (i *Interpreter) evaluate(expr Expr) any {
-	if expr == nil {
-		return nil
-	}
-	return expr.accept(i)
 }
 
 // Lox follows Ruby’s simple rule: false and nil are falsey, and everything else is truthy.

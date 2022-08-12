@@ -2,6 +2,14 @@ package ast
 
 import "github.com/fadyZohdy/gLox/pkg/scanner"
 
+type ParseError struct{}
+
+func (err ParseError) Error() string {
+	return "parse error"
+}
+
+var ParseErrorObj = &ParseError{}
+
 type RuntimeError struct {
 	Message string
 	Token   scanner.Token

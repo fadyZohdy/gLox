@@ -19,6 +19,12 @@ func main() {
 		"Grouping : expression Expr",
 		"Literal  : value interface{}",
 		"Unary    : operator scanner.Token, right Expr",
+		"Ternary  : condition Expr, trueBranch Expr, falseBranch Expr",
+	})
+
+	defineAst(outputDir, "Stmt", []string{
+		"Expression : expression Expr",
+		"Print      : expression Expr",
 	})
 }
 
@@ -26,10 +32,7 @@ func defineAst(outputDir, basename string, types []string) {
 	path := outputDir + "/" + strings.ToLower(basename) + ".go"
 
 	//cleanup first
-	err := os.Remove(path)
-	if err != nil {
-		log.Fatal(err)
-	}
+	os.Remove(path)
 
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
@@ -42,20 +45,12 @@ func defineAst(outputDir, basename string, types []string) {
 	writeToFile(file, "import \"github.com/fadyZohdy/gLox/pkg/scanner\"")
 	writeToFile(file, "")
 	writeToFile(file, "type "+basename+" interface {")
-	writeToFile(file, "\t"+"accept(visitor Visitor)")
-	writeToFile(file, "}")
-	writeToFile(file, "")
-
-	writeToFile(file, "type Visitor interface {")
-	for _, nodeType := range types {
-		typeName := strings.TrimSpace(strings.Split(nodeType, ":")[0])
-		writeToFile(file, "\t"+"Visit"+typeName+"Expr(expr *"+typeName+")")
-	}
+	writeToFile(file, "\t"+"accept(visitor Visitor) any")
 	writeToFile(file, "}")
 	writeToFile(file, "")
 
 	for _, nodeType := range types {
-		defineType(file, nodeType)
+		defineType(file, nodeType, basename)
 	}
 }
 
@@ -66,7 +61,7 @@ func writeToFile(file *os.File, content string) {
 	}
 }
 
-func defineType(file *os.File, nodeType string) {
+func defineType(file *os.File, nodeType string, basename string) {
 	structName := strings.TrimSpace(strings.Split(nodeType, ":")[0])
 	fieldsStr := strings.TrimSpace(strings.Split(nodeType, ":")[1])
 	fields := strings.Split(fieldsStr, ",")
@@ -78,8 +73,8 @@ func defineType(file *os.File, nodeType string) {
 	writeToFile(file, "}")
 	writeToFile(file, "")
 
-	writeToFile(file, "func (expr *"+structName+") accept(visitor Visitor) {")
-	writeToFile(file, "\t"+"visitor.Visit"+structName+"Expr(expr)")
+	writeToFile(file, "func (expr *"+structName+") accept(visitor Visitor) any {")
+	writeToFile(file, "\t"+"return visitor.Visit"+structName+basename+"(expr)")
 	writeToFile(file, "}")
 	writeToFile(file, "")
 }
