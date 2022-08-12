@@ -133,7 +133,11 @@ func (i *Interpreter) VisitTernaryExpr(expr *Ternary) any {
 }
 
 func (i *Interpreter) VisitVariableExpr(expr *Variable) any {
-	return i.env.get(expr.name)
+	value := i.env.get(expr.name)
+	if value == nil {
+		panic(&RuntimeError{fmt.Sprintf("%s is declated but not initialized", expr.name.Lexeme), expr.name})
+	}
+	return value
 }
 
 func (i *Interpreter) VisitVarStmt(stmt *Var) any {
