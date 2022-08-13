@@ -18,6 +18,9 @@ const (
 	QUESTION_MARK = "QUESTION_MARK"
 	COLON         = "COLON"
 
+	INCREMENT = "INCREMENT"
+	DECREMENT = "DECREMENT"
+
 	BANG          = "BANG"
 	BANG_EQUAL    = "BANG_EQUAL"
 	EQUAL         = "EQUAL"

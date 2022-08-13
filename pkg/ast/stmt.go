@@ -64,3 +64,12 @@ type Block struct {
 func (stmt *Block) accept(visitor Visitor) any {
 	return visitor.VisitBlockStmt(stmt)
 }
+
+type While struct {
+	condition Expr
+	body      Stmt
+}
+
+func (stmt *While) accept(v Visitor) any {
+	return v.VisitWhileStmt(stmt)
+}

@@ -99,6 +99,7 @@ func TestScanTokens(t *testing.T) {
 			{EOF, "", nil, 6},
 		}},
 		{"/*dkmdknde\ndjwndjkwn\nkwjhdkjw*/", []Token{{EOF, "", nil, 3}}},
+		{" 3 --", []Token{{Number, "3", float64(3), 1}, {DECREMENT, "--", nil, 1}, {EOF, "", nil, 1}}},
 
 		//malformed multiline comment
 		{"/*dkmdknde\ndjwndjkwn\nkwjhdkjw", []Token{{EOF, "", nil, 3}}},

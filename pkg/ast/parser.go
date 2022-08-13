@@ -64,11 +64,17 @@ func (p *Parser) varDeclaration() Stmt {
 }
 
 func (p *Parser) statement() Stmt {
+	if p.match(scanner.FOR) {
+		return p.forStatement()
+	}
 	if p.match(scanner.IF) {
 		return p.ifStatement()
 	}
 	if p.match(scanner.PRINT) {
 		return p.printStatement()
+	}
+	if p.match(scanner.WHILE) {
+		return p.whileStatement()
 	}
 
 	if p.match(scanner.LEFT_BRACE) {
@@ -76,6 +82,47 @@ func (p *Parser) statement() Stmt {
 	}
 
 	return p.expressionStatement()
+}
+
+func (p *Parser) forStatement() Stmt {
+	p.consume(scanner.LEFT_PAREN, "expect '(' after for")
+	var initializer Stmt
+	if p.match(scanner.SEMICOLON) {
+		initializer = nil
+	} else if p.match(scanner.VAR) {
+		initializer = p.varDeclaration()
+	} else {
+		initializer = p.expressionStatement()
+	}
+
+	var condition Stmt
+	if !p.check(scanner.SEMICOLON) {
+		condition = p.expression()
+	}
+	p.consume(scanner.SEMICOLON, "expect ';' after loop condition")
+
+	var increment Expr
+	if !p.check(scanner.RIGHT_PAREN) {
+		increment = p.expression()
+	}
+	p.consume(scanner.RIGHT_PAREN, "expect ')' after for clause")
+
+	body := p.statement()
+
+	if increment != nil {
+		body = &Block{[]Stmt{body, increment}}
+	}
+
+	if condition == nil {
+		condition = &Literal{true}
+	}
+	body = &While{condition: condition, body: body}
+
+	if initializer != nil {
+		body = &Block{[]Stmt{initializer, body}}
+	}
+
+	return body
 }
 
 func (p *Parser) ifStatement() Stmt {
@@ -96,6 +143,16 @@ func (p *Parser) printStatement() Stmt {
 	expr := p.expression()
 	p.consume(scanner.SEMICOLON, "expect ';' after expression")
 	return &Print{expression: expr}
+}
+
+func (p *Parser) whileStatement() Stmt {
+	p.consume(scanner.LEFT_PAREN, "expect '(' after while")
+	condition := p.expression()
+	p.consume(scanner.RIGHT_PAREN, "expect ')' after while condition")
+
+	body := p.statement()
+
+	return &While{condition: condition, body: body}
 }
 
 func (p *Parser) block() (stmts []Stmt) {
@@ -125,6 +182,15 @@ func (p *Parser) assignment() Expr {
 			return &Assign{variable.name, right}
 		}
 		p.error_reporter(equals.Line, "", "invalid assignment target")
+	}
+
+	// TODO: investigate cleaner way for incrementing/decrementing
+	if p.match(scanner.INCREMENT, scanner.DECREMENT) {
+		operator := p.previous()
+		if variable, ok := expr.(*Variable); ok {
+			return &Assign{variable.name, &Unary{operator, &Variable{variable.name}}}
+		}
+		p.error_reporter(operator.Line, "", "invalid assignment target")
 	}
 	return expr
 }

@@ -31,12 +31,24 @@ func (p *AstPrinter) VisitIfStmt(stmt *If) any {
 	return fmt.Sprintf("if (%s) %v else %v", stmt.condition.accept(p), stmt.trueBranch.accept(p), stmt.falseBranch.accept(p))
 }
 
-func (p *AstPrinter) VisitBlockStmt(stmt *Block) any {
-	return "block"
+func (p *AstPrinter) VisitBlockStmt(block *Block) any {
+	res := "{"
+	for _, stmt := range block.statements {
+		if str, ok := stmt.accept(p).(string); ok {
+			res += str
+			res += " "
+		}
+	}
+	res += "}"
+	return res
 }
 
 func (p *AstPrinter) VisitPrintStmt(stmt *Print) any {
 	return p.parenthesize("print", stmt.expression)
+}
+
+func (p *AstPrinter) VisitWhileStmt(stmt *While) any {
+	return fmt.Sprintf("while (%s) {%s}", stmt.condition.accept(p), stmt.body.accept(p))
 }
 
 func (p *AstPrinter) VisitAssignExpr(expr *Assign) any {

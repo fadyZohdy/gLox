@@ -26,6 +26,15 @@ func TestParser(t *testing.T) {
 		{"var x = ;", []string{}},
 		{"var x; x = 3;", []string{"(var x nil)", "(x =  3)"}},
 		{"1 == 2 and 3 < 2 or 4 > 3;", []string{"(or (and (== 1 2) (< 3 2)) (> 4 3))"}},
+		//while
+		{"var x = 0; while (x > 5) { print x; x++; }", []string{"(var x 0)", "while ((> x 5)) {{(print x) (x =  (++ x)) }}"}},
+		//for
+		{"for (var x = 1; x < 5; x ++) print x;", []string{"{(var x 1) while ((< x 5)) {{(print x) (x =  (++ x)) }} }"}},
+		{"var x; for (x = 1; x < 5; x ++) print x;", []string{"(var x nil)", "{(x =  1) while ((< x 5)) {{(print x) (x =  (++ x)) }} }"}},
+		{"var x = 1; for (; x < 5; x ++) print x;", []string{"(var x 1)", "while ((< x 5)) {{(print x) (x =  (++ x)) }}"}},
+		{"for (var x = 1;; x ++) print x;", []string{"{(var x 1) while (true) {{(print x) (x =  (++ x)) }} }"}},
+		{"for (var x = 1;;) print x;", []string{"{(var x 1) while (true) {(print x)} }"}},
+		{"for (;;) print x;", []string{"while (true) {(print x)}"}},
 	}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
@@ -33,9 +42,6 @@ func TestParser(t *testing.T) {
 			tokens := s.ScanTokens()
 			parser := NewParser(tokens, func(l int, w, m string) { log.Println("[line ", l, "] Error", w, ": ", m) })
 			stmts, _ := parser.Parse()
-			if len(stmts) != len(tt.expected) {
-				t.Errorf("AstPrinter.Print(%v). got = %s, want %s", tt.input, stmts, tt.expected)
-			}
 			for i, stmt := range stmts {
 				printer := &AstPrinter{}
 				res := printer.Print(stmt)

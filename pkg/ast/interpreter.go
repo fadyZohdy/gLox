@@ -55,6 +55,22 @@ func (i *Interpreter) VisitGroupingExpr(expr *Grouping) any {
 }
 
 func (i *Interpreter) VisitUnaryExpr(expr *Unary) any {
+	// TODO: investigate cleaner way for incrementing/decrementing
+	if variable, ok := expr.right.(*Variable); ok {
+		value := i.env.get(variable.name)
+		if value == nil {
+			panic(&RuntimeError{fmt.Sprintf("%s is declared but not initialized", variable.name.Lexeme), variable.name})
+		}
+		if i, ok := value.(float64); ok {
+			if expr.operator.Type == scanner.INCREMENT {
+				return i + 1
+			} else {
+				return i - 1
+			}
+		} else {
+			panic(&RuntimeError{fmt.Sprintf("%s is not a number", variable.name.Lexeme), variable.name})
+		}
+	}
 	right := i.evaluate(expr.right)
 	switch expr.operator.Type {
 	case scanner.MINUS:
@@ -181,6 +197,13 @@ func (i *Interpreter) VisitIfStmt(stmt *If) any {
 func (i *Interpreter) VisitPrintStmt(stmt *Print) any {
 	value := i.evaluate(stmt.expression)
 	fmt.Println(value)
+	return nil
+}
+
+func (i *Interpreter) VisitWhileStmt(stmt *While) any {
+	for isTruthy(i.evaluate(stmt.condition)) {
+		i.execute(stmt.body)
+	}
 	return nil
 }
 
