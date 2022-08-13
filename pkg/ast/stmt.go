@@ -18,6 +18,20 @@ func (stmt *Expression) accept(visitor Visitor) any {
 	return visitor.VisitExpressionStmt(stmt)
 }
 
+type If struct {
+	condition   Expr
+	trueBranch  Stmt
+	falseBranch Stmt
+}
+
+func (stmt If) String() string {
+	return fmt.Sprintf("if (%s) {%s} else {%s}", stmt.condition, stmt.trueBranch, stmt.falseBranch)
+}
+
+func (stmt *If) accept(v Visitor) any {
+	return v.VisitIfStmt(stmt)
+}
+
 type Print struct {
 	expression Expr
 }

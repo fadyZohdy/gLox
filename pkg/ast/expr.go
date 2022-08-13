@@ -51,6 +51,14 @@ func (expr *Ternary) accept(visitor Visitor) any {
 	return visitor.VisitTernaryExpr(expr)
 }
 
+type Logical struct {
+	operator    scanner.Token
+	left, right Expr}
+
+func (expr *Logical) accept(v Visitor) any {
+	return v.VisitLogicalExpr(expr)
+}
+
 type Variable struct {
 	name scanner.Token
 }

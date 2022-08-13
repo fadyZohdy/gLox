@@ -23,20 +23,28 @@ func (p *AstPrinter) VisitVariableExpr(expr *Variable) any {
 	return expr.name.Lexeme
 }
 
-func (p *AstPrinter) VisitExpressionStmt(expr *Expression) any {
-	return expr.expression.accept(p)
+func (p *AstPrinter) VisitExpressionStmt(stmt *Expression) any {
+	return stmt.expression.accept(p)
+}
+
+func (p *AstPrinter) VisitIfStmt(stmt *If) any {
+	return fmt.Sprintf("if (%s) %v else %v", stmt.condition.accept(p), stmt.trueBranch.accept(p), stmt.falseBranch.accept(p))
 }
 
 func (p *AstPrinter) VisitBlockStmt(stmt *Block) any {
 	return "block"
 }
 
-func (p *AstPrinter) VisitPrintStmt(expr *Print) any {
-	return p.parenthesize("print", expr.expression)
+func (p *AstPrinter) VisitPrintStmt(stmt *Print) any {
+	return p.parenthesize("print", stmt.expression)
 }
 
 func (p *AstPrinter) VisitAssignExpr(expr *Assign) any {
 	return p.parenthesize(expr.name.Lexeme+" = ", expr.value)
+}
+
+func (p *AstPrinter) VisitLogicalExpr(expr *Logical) any {
+	return p.parenthesize(expr.operator.Lexeme, expr.left, expr.right)
 }
 
 func (p *AstPrinter) VisitTernaryExpr(expr *Ternary) any {

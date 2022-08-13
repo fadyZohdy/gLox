@@ -132,10 +132,24 @@ func (i *Interpreter) VisitTernaryExpr(expr *Ternary) any {
 	}
 }
 
+func (i *Interpreter) VisitLogicalExpr(expr *Logical) any {
+	left := i.evaluate(expr.left)
+	if expr.operator.Type == scanner.OR {
+		if isTruthy(left) {
+			return left
+		}
+	} else {
+		if !isTruthy(left) {
+			return left
+		}
+	}
+	return i.evaluate(expr.right)
+}
+
 func (i *Interpreter) VisitVariableExpr(expr *Variable) any {
 	value := i.env.get(expr.name)
 	if value == nil {
-		panic(&RuntimeError{fmt.Sprintf("%s is declated but not initialized", expr.name.Lexeme), expr.name})
+		panic(&RuntimeError{fmt.Sprintf("%s is declared but not initialized", expr.name.Lexeme), expr.name})
 	}
 	return value
 }
@@ -154,6 +168,16 @@ func (i *Interpreter) VisitExpressionStmt(stmt *Expression) any {
 	return nil
 }
 
+func (i *Interpreter) VisitIfStmt(stmt *If) any {
+	flag := isTruthy(i.evaluate(stmt.condition))
+	if flag {
+		i.execute(stmt.trueBranch)
+	} else if stmt.falseBranch != nil {
+		i.execute(stmt.falseBranch)
+	}
+	return nil
+}
+
 func (i *Interpreter) VisitPrintStmt(stmt *Print) any {
 	value := i.evaluate(stmt.expression)
 	fmt.Println(value)
@@ -167,7 +191,9 @@ func (i *Interpreter) VisitAssignExpr(expr *Assign) any {
 }
 
 func (i *Interpreter) VisitBlockStmt(block *Block) any {
-	i.executeBlock(block)
+	if len(block.statements) > 0 {
+		i.executeBlock(block)
+	}
 	return nil
 }
 

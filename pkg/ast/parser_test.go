@@ -23,8 +23,9 @@ func TestParser(t *testing.T) {
 		{"print 3 + 5;", []string{"(print (+ 3 5))"}},
 		{"var x = 3 + 5;", []string{"(var x (+ 3 5))"}},
 		{"var y;", []string{"(var y nil)"}},
-		{"var x = ;", []string{"(var x nil)"}},
+		{"var x = ;", []string{}},
 		{"var x; x = 3;", []string{"(var x nil)", "(x =  3)"}},
+		{"1 == 2 and 3 < 2 or 4 > 3;", []string{"(or (and (== 1 2) (< 3 2)) (> 4 3))"}},
 	}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
@@ -32,11 +33,14 @@ func TestParser(t *testing.T) {
 			tokens := s.ScanTokens()
 			parser := NewParser(tokens, func(l int, w, m string) { log.Println("[line ", l, "] Error", w, ": ", m) })
 			stmts, _ := parser.Parse()
+			if len(stmts) != len(tt.expected) {
+				t.Errorf("AstPrinter.Print(%v). got = %s, want %s", tt.input, stmts, tt.expected)
+			}
 			for i, stmt := range stmts {
 				printer := &AstPrinter{}
 				res := printer.Print(stmt)
 				if res != tt.expected[i] {
-					t.Errorf("AstPrinter.Print(%v). got = %s, want %s", tt.input, res, tt.expected)
+					t.Errorf("AstPrinter.Print(%v). got = %s, want %s", tt.input, res, tt.expected[i])
 				}
 			}
 		})

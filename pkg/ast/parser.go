@@ -64,6 +64,9 @@ func (p *Parser) varDeclaration() Stmt {
 }
 
 func (p *Parser) statement() Stmt {
+	if p.match(scanner.IF) {
+		return p.ifStatement()
+	}
 	if p.match(scanner.PRINT) {
 		return p.printStatement()
 	}
@@ -75,18 +78,32 @@ func (p *Parser) statement() Stmt {
 	return p.expressionStatement()
 }
 
-func (p *Parser) block() (stmts []Stmt) {
-	for !p.isAtEnd() && !p.check(scanner.RIGHT_BRACE) {
-		stmts = append(stmts, p.declaration())
+func (p *Parser) ifStatement() Stmt {
+	p.consume(scanner.LEFT_PAREN, "expect '(' after if")
+	condition := p.expression()
+	p.consume(scanner.RIGHT_PAREN, "expect ')' after if condition")
+
+	trueBranch := p.statement()
+	var falseBranch Stmt = nil
+	if p.match(scanner.ELSE) {
+		falseBranch = p.statement()
 	}
-	p.consume(scanner.RIGHT_BRACE, "expect '}' at end of block")
-	return
+
+	return &If{condition: condition, trueBranch: trueBranch, falseBranch: falseBranch}
 }
 
 func (p *Parser) printStatement() Stmt {
 	expr := p.expression()
 	p.consume(scanner.SEMICOLON, "expect ';' after expression")
 	return &Print{expression: expr}
+}
+
+func (p *Parser) block() (stmts []Stmt) {
+	for !p.isAtEnd() && !p.check(scanner.RIGHT_BRACE) {
+		stmts = append(stmts, p.declaration())
+	}
+	p.consume(scanner.RIGHT_BRACE, "expect '}' at end of block")
+	return
 }
 
 func (p *Parser) expressionStatement() Stmt {
@@ -125,12 +142,32 @@ func (p *Parser) comma() Expr {
 }
 
 func (p *Parser) ternary() Expr {
-	expr := p.equality()
+	expr := p.or()
 	if p.match(scanner.QUESTION_MARK) {
 		trueBranch := p.expression()
 		p.consume(scanner.COLON, "Expect ':' after true branch of ternary expression")
 		falseBranch := p.ternary()
 		expr = &Ternary{expr, trueBranch, falseBranch}
+	}
+	return expr
+}
+
+func (p *Parser) or() Expr {
+	expr := p.and()
+	if p.match(scanner.OR) {
+		operator := p.previous()
+		right := p.and()
+		expr = &Logical{left: expr, operator: operator, right: right}
+	}
+	return expr
+}
+
+func (p *Parser) and() Expr {
+	expr := p.equality()
+	if p.match(scanner.AND) {
+		operator := p.previous()
+		right := p.equality()
+		expr = &Logical{left: expr, operator: operator, right: right}
 	}
 	return expr
 }
