@@ -7,7 +7,9 @@ import (
 type AstPrinter struct{}
 
 func (p *AstPrinter) Print(expr Expr) string {
-	// clean internal state of the printer
+	if expr == nil {
+		return ""
+	}
 	res := expr.accept(p)
 	if res_s, ok := res.(string); ok {
 		return res_s
@@ -49,6 +51,10 @@ func (p *AstPrinter) VisitPrintStmt(stmt *Print) any {
 
 func (p *AstPrinter) VisitWhileStmt(stmt *While) any {
 	return fmt.Sprintf("while (%s) {%s}", stmt.condition.accept(p), stmt.body.accept(p))
+}
+
+func (p *AstPrinter) VisitBreakStatement(stmt *Break) any {
+	return "break"
 }
 
 func (p *AstPrinter) VisitAssignExpr(expr *Assign) any {

@@ -5,25 +5,6 @@ import (
 	"unicode"
 )
 
-var keywords = map[string]TokenType{
-	"and":    AND,
-	"class":  CLASS,
-	"else":   ELSE,
-	"false":  FALSE,
-	"for":    FOR,
-	"fun":    FUN,
-	"if":     IF,
-	"nil":    NIL,
-	"or":     OR,
-	"print":  PRINT,
-	"return": RETURN,
-	"super":  SUPER,
-	"this":   THIS,
-	"true":   TRUE,
-	"var":    VAR,
-	"while":  WHILE,
-}
-
 type Scanner struct {
 	source string
 	tokens []Token
@@ -184,7 +165,7 @@ func (s *Scanner) scan_identifier() {
 
 	word := s.source[s.start:s.current]
 
-	if token_type, ok := keywords[word]; ok {
+	if token_type, ok := Keywords[word]; ok {
 		s.addToken(token_type)
 	} else {
 		s.addToken(IDENTIFIER)
@@ -230,7 +211,6 @@ func (s *Scanner) isAtEnd() bool {
 
 func (s *Scanner) advance() rune {
 	c := rune(s.source[s.current])
-	// fmt.Println("advance:", string(c))
 	s.current++
 	return c
 }

@@ -73,3 +73,9 @@ type While struct {
 func (stmt *While) accept(v Visitor) any {
 	return v.VisitWhileStmt(stmt)
 }
+
+type Break struct{}
+
+func (stmt *Break) accept(v Visitor) any {
+	return v.VisitBreakStatement(stmt)
+}

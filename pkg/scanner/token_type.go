@@ -35,6 +35,7 @@ const (
 	Number     = "Number"
 
 	AND    = "AND"
+	BREAK  = "BREAK"
 	CLASS  = "CLASS"
 	ELSE   = "ELSE"
 	FALSE  = "FALSE"
@@ -53,3 +54,23 @@ const (
 
 	EOF = "EOF"
 )
+
+var Keywords = map[string]TokenType{
+	"and":    AND,
+	"break":  BREAK,
+	"class":  CLASS,
+	"else":   ELSE,
+	"false":  FALSE,
+	"for":    FOR,
+	"fun":    FUN,
+	"if":     IF,
+	"nil":    NIL,
+	"or":     OR,
+	"print":  PRINT,
+	"return": RETURN,
+	"super":  SUPER,
+	"this":   THIS,
+	"true":   TRUE,
+	"var":    VAR,
+	"while":  WHILE,
+}

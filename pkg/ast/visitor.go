@@ -16,4 +16,5 @@ type Visitor interface {
 	VisitPrintStmt(stmt *Print) any
 	VisitBlockStmt(stmt *Block) any
 	VisitWhileStmt(stmt *While) any
+	VisitBreakStatement(stmt *Break) any
 }

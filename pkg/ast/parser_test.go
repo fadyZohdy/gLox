@@ -35,6 +35,8 @@ func TestParser(t *testing.T) {
 		{"for (var x = 1;; x ++) print x;", []string{"{(var x 1) while (true) {{(print x) (x =  (++ x)) }} }"}},
 		{"for (var x = 1;;) print x;", []string{"{(var x 1) while (true) {(print x)} }"}},
 		{"for (;;) print x;", []string{"while (true) {(print x)}"}},
+		{"for (;;) break;", []string{"while (true) {break}"}},
+		{"break;", []string{""}},
 	}
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {

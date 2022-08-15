@@ -8,6 +8,8 @@ type Parser struct {
 	tokens         []scanner.Token
 	current        int
 	error_reporter func(int, string, string)
+	// used to track how many loops we are parsing currently to report error if user is breaking outside loop
+	loops int
 }
 
 func NewParser(tokens []scanner.Token, error_reporter func(int, string, string)) *Parser {
@@ -64,6 +66,9 @@ func (p *Parser) varDeclaration() Stmt {
 }
 
 func (p *Parser) statement() Stmt {
+	if p.match(scanner.BREAK) {
+		return p.breakStatement()
+	}
 	if p.match(scanner.FOR) {
 		return p.forStatement()
 	}
@@ -82,6 +87,16 @@ func (p *Parser) statement() Stmt {
 	}
 
 	return p.expressionStatement()
+}
+
+func (p *Parser) breakStatement() Stmt {
+	// user is trying to break outside a loop
+	if p.loops == 0 {
+		p.error_reporter(p.peek().Line, "", "'break' outside loop")
+		return nil
+	}
+	p.consume(scanner.SEMICOLON, "expect ';' after break")
+	return &Break{}
 }
 
 func (p *Parser) forStatement() Stmt {
@@ -107,6 +122,8 @@ func (p *Parser) forStatement() Stmt {
 	}
 	p.consume(scanner.RIGHT_PAREN, "expect ')' after for clause")
 
+	p.loops += 1
+	defer func() { p.loops -= 1 }()
 	body := p.statement()
 
 	if increment != nil {
@@ -150,6 +167,8 @@ func (p *Parser) whileStatement() Stmt {
 	condition := p.expression()
 	p.consume(scanner.RIGHT_PAREN, "expect ')' after while condition")
 
+	p.loops += 1
+	defer func() { p.loops -= 1 }()
 	body := p.statement()
 
 	return &While{condition: condition, body: body}

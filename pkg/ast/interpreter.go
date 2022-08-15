@@ -8,12 +8,13 @@ import (
 )
 
 type Interpreter struct {
-	error_reporter func(error *RuntimeError)
-	env            *Environment
+	errorReporter    func(error *RuntimeError)
+	env              *Environment
+	breakEncountered bool
 }
 
-func NewInterpreter(error_reporter func(error *RuntimeError)) *Interpreter {
-	return &Interpreter{error_reporter, NewEnvironment(nil)}
+func NewInterpreter(errorReporter func(error *RuntimeError)) *Interpreter {
+	return &Interpreter{errorReporter, NewEnvironment(nil), false}
 }
 
 func (i *Interpreter) Interpret(stmts []Stmt) (err error) {
@@ -24,7 +25,7 @@ func (i *Interpreter) Interpret(stmts []Stmt) (err error) {
 			// err panic occurred
 			err = e
 
-			i.error_reporter(e)
+			i.errorReporter(e)
 		}
 	}()
 
@@ -36,6 +37,9 @@ func (i *Interpreter) Interpret(stmts []Stmt) (err error) {
 }
 
 func (i *Interpreter) execute(stmt Stmt) {
+	if i.breakEncountered {
+		return
+	}
 	stmt.accept(i)
 }
 
@@ -203,6 +207,10 @@ func (i *Interpreter) VisitPrintStmt(stmt *Print) any {
 func (i *Interpreter) VisitWhileStmt(stmt *While) any {
 	for isTruthy(i.evaluate(stmt.condition)) {
 		i.execute(stmt.body)
+		if i.breakEncountered {
+			i.breakEncountered = false
+			return nil
+		}
 	}
 	return nil
 }
@@ -217,6 +225,11 @@ func (i *Interpreter) VisitBlockStmt(block *Block) any {
 	if len(block.statements) > 0 {
 		i.executeBlock(block)
 	}
+	return nil
+}
+
+func (i *Interpreter) VisitBreakStatement(stmt *Break) any {
+	i.breakEncountered = true
 	return nil
 }
 
