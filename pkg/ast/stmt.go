@@ -79,3 +79,22 @@ type Break struct{}
 func (stmt *Break) accept(v Visitor) any {
 	return v.VisitBreakStatement(stmt)
 }
+
+type Function struct {
+	name   scanner.Token
+	params []scanner.Token
+	body   []Stmt
+}
+
+func (stmt *Function) accept(v Visitor) any {
+	return v.VisitFunctionStmt(stmt)
+}
+
+type Return struct {
+	keyword scanner.Token
+	value   Expr
+}
+
+func (stmt *Return) accept(v Visitor) any {
+	return v.VisitReturnStmt(stmt)
+}

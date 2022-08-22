@@ -11,10 +11,13 @@ type Interpreter struct {
 	errorReporter    func(error *RuntimeError)
 	env              *Environment
 	breakEncountered bool
+	returnValue      any
 }
 
 func NewInterpreter(errorReporter func(error *RuntimeError)) *Interpreter {
-	return &Interpreter{errorReporter, NewEnvironment(nil), false}
+	i := &Interpreter{errorReporter, NewEnvironment(nil), false, nil}
+	i.env.define("clock", &Clock{})
+	return i
 }
 
 func (i *Interpreter) Interpret(stmts []Stmt) (err error) {
@@ -38,6 +41,9 @@ func (i *Interpreter) Interpret(stmts []Stmt) (err error) {
 
 func (i *Interpreter) execute(stmt Stmt) {
 	if i.breakEncountered {
+		return
+	}
+	if i.returnValue != nil {
 		return
 	}
 	stmt.accept(i)
@@ -221,9 +227,38 @@ func (i *Interpreter) VisitAssignExpr(expr *Assign) any {
 	return value
 }
 
+func (i *Interpreter) VisitCallExpr(expr *Call) any {
+	callee := i.evaluate(expr.callee)
+
+	arguments := []any{}
+
+	for _, arg := range expr.arguments {
+		arguments = append(arguments, i.evaluate(arg))
+	}
+
+	if function, ok := callee.(LoxCallable); ok {
+		if len(arguments) != function.arity() {
+			panic(&RuntimeError{fmt.Sprintf("expected %d arguments but got %d", function.arity(), len(arguments)), expr.paren})
+		}
+		return function.call(i, arguments)
+	} else {
+		panic(&RuntimeError{"can only call functions or classes", expr.paren})
+	}
+}
+
+func (i *Interpreter) VisitReturnStmt(stmt *Return) any {
+	var value any
+	if stmt.value != nil {
+		value = i.evaluate(stmt.value)
+	}
+	i.returnValue = value
+	return nil
+}
+
 func (i *Interpreter) VisitBlockStmt(block *Block) any {
 	if len(block.statements) > 0 {
-		i.executeBlock(block)
+		env := NewEnvironment(i.env)
+		i.executeBlock(block.statements, env)
 	}
 	return nil
 }
@@ -233,17 +268,30 @@ func (i *Interpreter) VisitBreakStatement(stmt *Break) any {
 	return nil
 }
 
-func (i *Interpreter) executeBlock(block *Block) {
+func (i *Interpreter) VisitFunctionStmt(stmt *Function) any {
+	f := &LoxFunction{declaration: stmt}
+	i.env.define(stmt.name.Lexeme, f)
+	return nil
+}
+
+func (i *Interpreter) executeBlock(stmts []Stmt, env *Environment) any {
 	prevEnv := i.env
 
 	defer func() {
 		i.env = prevEnv
 	}()
 
-	i.env = NewEnvironment(prevEnv)
-	for _, stmt := range block.statements {
+	i.env = env
+
+	for _, stmt := range stmts {
 		i.execute(stmt)
+		if i.returnValue != nil {
+			v := i.returnValue
+			i.returnValue = nil
+			return v
+		}
 	}
+	return nil
 }
 
 func panicWithToken(e *RuntimeError, token scanner.Token) {

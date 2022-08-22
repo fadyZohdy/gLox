@@ -57,6 +57,30 @@ func (p *AstPrinter) VisitBreakStatement(stmt *Break) any {
 	return "break"
 }
 
+func (p *AstPrinter) VisitFunctionStmt(stmt *Function) any {
+	res := fmt.Sprintf("fun %s(", stmt.name.Lexeme)
+	for _, p := range stmt.params {
+		res += p.Lexeme + ","
+	}
+	res += ") { "
+	for _, s := range stmt.body {
+		res += fmt.Sprintf("%v", s.accept(p))
+	}
+	res += " }"
+	return res
+}
+
+func (p *AstPrinter) VisitReturnStmt(stmt *Return) any {
+	return fmt.Sprintf("return %v", stmt.value.accept(p))
+}
+
+func (p *AstPrinter) VisitCallExpr(expr *Call) any {
+	if callee, ok := expr.callee.accept(p).(string); ok {
+		return p.parenthesize(callee, expr.arguments...)
+	}
+	return ""
+}
+
 func (p *AstPrinter) VisitAssignExpr(expr *Assign) any {
 	return p.parenthesize(expr.name.Lexeme+" = ", expr.value)
 }

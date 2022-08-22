@@ -50,7 +50,7 @@ func runPrompt() {
 		reader := bufio.NewReader(os.Stdin)
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal("Could not read from stdin")
+			log.Fatal()
 			return
 		}
 		if len(line) == 0 {
@@ -70,7 +70,7 @@ func run(source string) {
 	// pprof.StartCPUProfile(f)
 	// defer pprof.StopCPUProfile()
 	// t1 := time.Now().UnixNano() / int64(time.Millisecond)
-	scanner := scanner.NewScanner(source, error)
+	scanner := scanner.NewScanner(source, func(line int, message string) { report(line, "", message) })
 	tokens := scanner.ScanTokens()
 	// t2 := time.Now().UnixNano() / int64(time.Millisecond)
 	// fmt.Println("scanner: ", t2-t1)
@@ -86,10 +86,6 @@ func run(source string) {
 	interpreter.Interpret(stmts)
 	// t4 := time.Now().UnixNano() / int64(time.Millisecond)
 	// fmt.Println("Interpreter: ", t4-t3)
-}
-
-func error(line int, message string) {
-	report(line, "", message)
 }
 
 func runtimeError(err *ast.RuntimeError) {

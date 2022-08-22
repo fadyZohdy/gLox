@@ -1,6 +1,8 @@
 package ast
 
 import (
+	"fmt"
+
 	scanner "github.com/fadyZohdy/gLox/pkg/scanner"
 )
 
@@ -49,10 +51,38 @@ func (p *Parser) declaration() Stmt {
 		}
 	}()
 
+	if p.match(scanner.FUN) {
+		return p.function("function")
+	}
+
 	if p.match(scanner.VAR) {
 		return p.varDeclaration()
 	}
 	return p.statement()
+}
+
+func (p *Parser) function(kind string) Stmt {
+	name := p.consume(scanner.IDENTIFIER, fmt.Sprintf("expect %s name", kind))
+
+	p.consume(scanner.LEFT_PAREN, fmt.Sprintf("expect '(' after %s name", kind))
+
+	var params []scanner.Token
+
+	if !p.check(scanner.RIGHT_PAREN) {
+		if len(params) > 255 {
+			p.error_reporter(p.peek().Line, "", "can't have more than 255 parameters")
+		}
+		params = append(params, p.consume(scanner.IDENTIFIER, "expect parameter name"))
+		for p.match(scanner.COMMA) {
+			params = append(params, p.consume(scanner.IDENTIFIER, "expect parameter name"))
+		}
+	}
+	p.consume(scanner.RIGHT_PAREN, fmt.Sprintf("expect ')' after %s parameters"))
+
+	p.consume(scanner.LEFT_BRACE, fmt.Sprintf("expect '{' before %s body", kind))
+	body := p.block()
+
+	return &Function{name: name, params: params, body: body}
 }
 
 func (p *Parser) varDeclaration() Stmt {
@@ -77,6 +107,9 @@ func (p *Parser) statement() Stmt {
 	}
 	if p.match(scanner.PRINT) {
 		return p.printStatement()
+	}
+	if p.match(scanner.RETURN) {
+		return p.returnStatement()
 	}
 	if p.match(scanner.WHILE) {
 		return p.whileStatement()
@@ -162,6 +195,16 @@ func (p *Parser) printStatement() Stmt {
 	return &Print{expression: expr}
 }
 
+func (p *Parser) returnStatement() Stmt {
+	keyword := p.previous()
+	var expr Expr
+	if !p.check(scanner.SEMICOLON) {
+		expr = p.expression()
+	}
+	p.consume(scanner.SEMICOLON, "expect ';' after expression")
+	return &Return{keyword: keyword, value: expr}
+}
+
 func (p *Parser) whileStatement() Stmt {
 	p.consume(scanner.LEFT_PAREN, "expect '(' after while")
 	condition := p.expression()
@@ -188,15 +231,22 @@ func (p *Parser) expressionStatement() Stmt {
 	return &Expression{expression: expr}
 }
 
-func (p *Parser) expression() Expr {
-	return p.assignment()
+func (p *Parser) expression(args ...bool) Expr {
+	return p.assignment(args...)
 }
 
-func (p *Parser) assignment() Expr {
-	expr := p.comma()
+func (p *Parser) assignment(args ...bool) Expr {
+	var expr Expr
+	// this is a hack to distinguish between block expressions and functions arguments
+	// since both of them use comma as a separator
+	if len(args) > 0 && args[0] {
+		expr = p.ternary()
+	} else {
+		expr = p.comma()
+	}
 	if p.match(scanner.EQUAL) {
 		equals := p.previous()
-		right := p.assignment()
+		right := p.assignment(false)
 		if variable, ok := expr.(*Variable); ok {
 			return &Assign{variable.name, right}
 		}
@@ -303,7 +353,36 @@ func (p *Parser) unary() Expr {
 		right := p.unary()
 		return &Unary{operator, right}
 	}
-	return p.primary()
+	return p.call()
+}
+
+func (p *Parser) call() Expr {
+	expr := p.primary()
+
+	for {
+		if p.match(scanner.LEFT_PAREN) {
+			expr = p.finishCall(expr)
+		} else {
+			break
+		}
+	}
+	return expr
+}
+
+func (p *Parser) finishCall(callee Expr) Expr {
+	var arguments []Expr
+	if p.match(scanner.RIGHT_PAREN) {
+		return &Call{callee: callee, arguments: arguments, paren: p.previous()}
+	}
+	arguments = append(arguments, p.expression(true))
+	for p.match(scanner.COMMA) {
+		if len(arguments) > 255 {
+			p.error_reporter(p.peek().Line, "", "can't have more than 255 arguments")
+		}
+		arguments = append(arguments, p.expression(true))
+	}
+	p.consume(scanner.RIGHT_PAREN, "expect ')' after arguments")
+	return &Call{callee: callee, arguments: arguments, paren: p.previous()}
 }
 
 func (p *Parser) primary() Expr {
