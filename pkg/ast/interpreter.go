@@ -269,7 +269,7 @@ func (i *Interpreter) VisitBreakStatement(stmt *Break) any {
 }
 
 func (i *Interpreter) VisitFunctionStmt(stmt *Function) any {
-	f := &LoxFunction{declaration: stmt}
+	f := &LoxFunction{declaration: stmt, closure: i.env}
 	i.env.define(stmt.name.Lexeme, f)
 	return nil
 }

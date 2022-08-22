@@ -2,6 +2,7 @@ package ast
 
 type LoxFunction struct {
 	declaration *Function
+	closure     *Environment
 }
 
 func (f *LoxFunction) arity() int {
@@ -9,7 +10,7 @@ func (f *LoxFunction) arity() int {
 }
 
 func (f *LoxFunction) call(interpreter *Interpreter, arguments []any) any {
-	env := NewEnvironment(interpreter.env)
+	env := NewEnvironment(f.closure)
 	for i, param := range f.declaration.params {
 		env.define(param.Lexeme, arguments[i])
 	}
