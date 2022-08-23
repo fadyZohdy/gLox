@@ -233,7 +233,11 @@ func (i *Interpreter) VisitCallExpr(expr *Call) any {
 	arguments := []any{}
 
 	for _, arg := range expr.arguments {
-		arguments = append(arguments, i.evaluate(arg))
+		if f, ok := arg.(*Function); ok {
+			arguments = append(arguments, &LoxFunction{declaration: f, closure: i.env})
+		} else {
+			arguments = append(arguments, i.evaluate(arg))
+		}
 	}
 
 	if function, ok := callee.(LoxCallable); ok {

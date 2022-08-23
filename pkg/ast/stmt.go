@@ -90,6 +90,10 @@ func (stmt *Function) accept(v Visitor) any {
 	return v.VisitFunctionStmt(stmt)
 }
 
+func (stmt *Function) isAnon() bool {
+	return stmt.name.Lexeme == ""
+}
+
 type Return struct {
 	keyword scanner.Token
 	value   Expr

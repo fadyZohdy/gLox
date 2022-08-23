@@ -52,7 +52,7 @@ func (p *Parser) declaration() Stmt {
 	}()
 
 	if p.match(scanner.FUN) {
-		return p.function("function")
+		return p.function("function", false)
 	}
 
 	if p.match(scanner.VAR) {
@@ -61,8 +61,15 @@ func (p *Parser) declaration() Stmt {
 	return p.statement()
 }
 
-func (p *Parser) function(kind string) Stmt {
-	name := p.consume(scanner.IDENTIFIER, fmt.Sprintf("expect %s name", kind))
+func (p *Parser) function(kind string, argument bool) Stmt {
+	var name scanner.Token
+	// only anonymous functions allowed to not have function name.
+	// anonymous functions can be assigned to a variable or passed directly as function argument
+	if p.check(scanner.IDENTIFIER) {
+		name = p.consume(scanner.IDENTIFIER, fmt.Sprintf("expect %s name", kind))
+	} else if !argument {
+		p.error_reporter(p.peek().Line, "", fmt.Sprintf("expect %s name", kind))
+	}
 
 	p.consume(scanner.LEFT_PAREN, fmt.Sprintf("expect '(' after %s name", kind))
 
@@ -77,7 +84,7 @@ func (p *Parser) function(kind string) Stmt {
 			params = append(params, p.consume(scanner.IDENTIFIER, "expect parameter name"))
 		}
 	}
-	p.consume(scanner.RIGHT_PAREN, fmt.Sprintf("expect ')' after %s parameters"))
+	p.consume(scanner.RIGHT_PAREN, fmt.Sprintf("expect ')' after %s parameters", kind))
 
 	p.consume(scanner.LEFT_BRACE, fmt.Sprintf("expect '{' before %s body", kind))
 	body := p.block()
@@ -371,18 +378,27 @@ func (p *Parser) call() Expr {
 
 func (p *Parser) finishCall(callee Expr) Expr {
 	var arguments []Expr
+	// function with no arguments
 	if p.match(scanner.RIGHT_PAREN) {
 		return &Call{callee: callee, arguments: arguments, paren: p.previous()}
 	}
-	arguments = append(arguments, p.expression(true))
+
+	arguments = append(arguments, p.argument())
 	for p.match(scanner.COMMA) {
 		if len(arguments) > 255 {
 			p.error_reporter(p.peek().Line, "", "can't have more than 255 arguments")
 		}
-		arguments = append(arguments, p.expression(true))
+		arguments = append(arguments, p.argument())
 	}
 	p.consume(scanner.RIGHT_PAREN, "expect ')' after arguments")
 	return &Call{callee: callee, arguments: arguments, paren: p.previous()}
+}
+
+func (p *Parser) argument() Stmt {
+	if p.match(scanner.FUN) {
+		return p.function("function", true)
+	}
+	return p.expression(true)
 }
 
 func (p *Parser) primary() Expr {

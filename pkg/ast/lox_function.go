@@ -19,5 +19,8 @@ func (f *LoxFunction) call(interpreter *Interpreter, arguments []any) any {
 }
 
 func (l LoxFunction) String() string {
+	if l.declaration.isAnon() {
+		return "<fn>"
+	}
 	return "<fn " + l.declaration.name.Lexeme + ">"
 }
