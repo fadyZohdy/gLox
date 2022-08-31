@@ -45,6 +45,7 @@ func runFile(fileName string) {
 
 func runPrompt() {
 	// TODO: support arrow keys and history
+	interpreter := ast.NewInterpreter(runtimeError)
 	for {
 		fmt.Printf("> ")
 		reader := bufio.NewReader(os.Stdin)
@@ -53,39 +54,41 @@ func runPrompt() {
 			log.Fatal()
 			return
 		}
-		if len(line) == 0 {
-			log.Println("break")
-			break
+		if len(line) == 1 {
+			continue
 		}
-		run(string(line))
-		hadError = false
+		source := string(line)
+		scanner := scanner.NewScanner(source, func(line int, message string) { report(line, "", message) })
+		tokens := scanner.ScanTokens()
+		parser := ast.NewParser(tokens, report)
+		stmts, err := parser.Parse()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		// if expr, ok := stmts[0].(*ast.Expression); ok {
+		for _, stmt := range stmts {
+			if expr, ok := stmt.(*ast.Expression); ok {
+				fmt.Println(interpreter.Evaluate(expr))
+			} else {
+				interpreter.Interpret([]ast.Stmt{stmt})
+			}
+			hadError = false
+		}
 	}
 }
 
 func run(source string) {
-	// f, err := os.Create("cpu.profile")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// pprof.StartCPUProfile(f)
-	// defer pprof.StopCPUProfile()
-	// t1 := time.Now().UnixNano() / int64(time.Millisecond)
 	scanner := scanner.NewScanner(source, func(line int, message string) { report(line, "", message) })
 	tokens := scanner.ScanTokens()
-	// t2 := time.Now().UnixNano() / int64(time.Millisecond)
-	// fmt.Println("scanner: ", t2-t1)
 	parser := ast.NewParser(tokens, report)
 	stmts, err := parser.Parse()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	// t3 := time.Now().UnixNano() / int64(time.Millisecond)
-	// fmt.Println("Parser: ", t3-t2)
 	interpreter := ast.NewInterpreter(runtimeError)
 	interpreter.Interpret(stmts)
-	// t4 := time.Now().UnixNano() / int64(time.Millisecond)
-	// fmt.Println("Interpreter: ", t4-t3)
 }
 
 func runtimeError(err *ast.RuntimeError) {

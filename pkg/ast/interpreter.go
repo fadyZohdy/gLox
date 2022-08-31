@@ -21,7 +21,6 @@ func NewInterpreter(errorReporter func(error *RuntimeError)) *Interpreter {
 }
 
 func (i *Interpreter) Interpret(stmts []Stmt) (err error) {
-	// TODO: should we reset environment here ?!!
 	defer func() {
 		e := recover()
 		if e, ok := e.(*RuntimeError); ok {
@@ -49,7 +48,7 @@ func (i *Interpreter) execute(stmt Stmt) {
 	stmt.accept(i)
 }
 
-func (i *Interpreter) evaluate(expr Expr) any {
+func (i *Interpreter) Evaluate(expr Expr) any {
 	if expr == nil {
 		return nil
 	}
@@ -61,7 +60,7 @@ func (i *Interpreter) VisitLiteralExpr(expr *Literal) any {
 }
 
 func (i *Interpreter) VisitGroupingExpr(expr *Grouping) any {
-	return i.evaluate(expr.expression)
+	return i.Evaluate(expr.expression)
 }
 
 func (i *Interpreter) VisitUnaryExpr(expr *Unary) any {
@@ -81,7 +80,7 @@ func (i *Interpreter) VisitUnaryExpr(expr *Unary) any {
 			panic(&RuntimeError{fmt.Sprintf("%s is not a number", variable.name.Lexeme), variable.name})
 		}
 	}
-	right := i.evaluate(expr.right)
+	right := i.Evaluate(expr.right)
 	switch expr.operator.Type {
 	case scanner.MINUS:
 		return -1 * checkNumber(right, expr.operator)
@@ -92,8 +91,8 @@ func (i *Interpreter) VisitUnaryExpr(expr *Unary) any {
 }
 
 func (i *Interpreter) VisitBinaryExpr(expr *Binary) any {
-	left := i.evaluate(expr.left)
-	right := i.evaluate(expr.right)
+	left := i.Evaluate(expr.left)
+	right := i.Evaluate(expr.right)
 
 	switch expr.operator.Type {
 	case scanner.EQUAL_EQUAL:
@@ -146,12 +145,12 @@ func (i *Interpreter) VisitBinaryExpr(expr *Binary) any {
 }
 
 func (i *Interpreter) VisitTernaryExpr(expr *Ternary) any {
-	condition := i.evaluate(expr.condition)
+	condition := i.Evaluate(expr.condition)
 	if flag, ok := condition.(bool); ok {
 		if flag {
-			return i.evaluate(expr.trueBranch)
+			return i.Evaluate(expr.trueBranch)
 		} else {
-			return i.evaluate(expr.falseBranch)
+			return i.Evaluate(expr.falseBranch)
 		}
 	} else {
 		panic(&RuntimeError{Message: "ternary condition value is not a boolean"})
@@ -159,7 +158,7 @@ func (i *Interpreter) VisitTernaryExpr(expr *Ternary) any {
 }
 
 func (i *Interpreter) VisitLogicalExpr(expr *Logical) any {
-	left := i.evaluate(expr.left)
+	left := i.Evaluate(expr.left)
 	if expr.operator.Type == scanner.OR {
 		if isTruthy(left) {
 			return left
@@ -169,7 +168,7 @@ func (i *Interpreter) VisitLogicalExpr(expr *Logical) any {
 			return left
 		}
 	}
-	return i.evaluate(expr.right)
+	return i.Evaluate(expr.right)
 }
 
 func (i *Interpreter) VisitVariableExpr(expr *Variable) any {
@@ -183,19 +182,18 @@ func (i *Interpreter) VisitVariableExpr(expr *Variable) any {
 func (i *Interpreter) VisitVarStmt(stmt *Var) any {
 	var value any
 	if stmt.initializer != nil {
-		value = i.evaluate(stmt.initializer)
+		value = i.Evaluate(stmt.initializer)
 	}
 	i.env.define(stmt.name.Lexeme, value)
 	return nil
 }
 
 func (i *Interpreter) VisitExpressionStmt(stmt *Expression) any {
-	i.evaluate(stmt.expression)
-	return nil
+	return i.Evaluate(stmt.expression)
 }
 
 func (i *Interpreter) VisitIfStmt(stmt *If) any {
-	flag := isTruthy(i.evaluate(stmt.condition))
+	flag := isTruthy(i.Evaluate(stmt.condition))
 	if flag {
 		i.execute(stmt.trueBranch)
 	} else if stmt.falseBranch != nil {
@@ -205,13 +203,13 @@ func (i *Interpreter) VisitIfStmt(stmt *If) any {
 }
 
 func (i *Interpreter) VisitPrintStmt(stmt *Print) any {
-	value := i.evaluate(stmt.expression)
+	value := i.Evaluate(stmt.expression)
 	fmt.Println(value)
 	return nil
 }
 
 func (i *Interpreter) VisitWhileStmt(stmt *While) any {
-	for isTruthy(i.evaluate(stmt.condition)) {
+	for isTruthy(i.Evaluate(stmt.condition)) {
 		i.execute(stmt.body)
 		if i.breakEncountered {
 			i.breakEncountered = false
@@ -222,13 +220,13 @@ func (i *Interpreter) VisitWhileStmt(stmt *While) any {
 }
 
 func (i *Interpreter) VisitAssignExpr(expr *Assign) any {
-	value := i.evaluate(expr.value)
+	value := i.Evaluate(expr.value)
 	i.env.assign(expr.name, value)
 	return value
 }
 
 func (i *Interpreter) VisitCallExpr(expr *Call) any {
-	callee := i.evaluate(expr.callee)
+	callee := i.Evaluate(expr.callee)
 
 	arguments := []any{}
 
@@ -236,7 +234,7 @@ func (i *Interpreter) VisitCallExpr(expr *Call) any {
 		if f, ok := arg.(*Function); ok {
 			arguments = append(arguments, &LoxFunction{declaration: f, closure: i.env})
 		} else {
-			arguments = append(arguments, i.evaluate(arg))
+			arguments = append(arguments, i.Evaluate(arg))
 		}
 	}
 
@@ -253,7 +251,7 @@ func (i *Interpreter) VisitCallExpr(expr *Call) any {
 func (i *Interpreter) VisitReturnStmt(stmt *Return) any {
 	var value any
 	if stmt.value != nil {
-		value = i.evaluate(stmt.value)
+		value = i.Evaluate(stmt.value)
 	}
 	i.returnValue = value
 	return nil
