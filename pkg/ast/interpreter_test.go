@@ -46,7 +46,7 @@ func TestInterpreter(t *testing.T) {
 			parser := NewParser(tokens, func(l int, w, m string) { log.Println("[line ", l, "] Error", w, ": ", m) })
 			stmts, _ := parser.Parse()
 			interpreter := NewInterpreter(func(err *RuntimeError) { log.Println(err.Message, "[line ", err.Token.Line, "]") })
-			interpreter.Interpret(stmts)
+			interpreter.Interpret(&stmts)
 			environment := interpreter.env.values
 			for k, v := range environment {
 				if v != tt.expected[k] {

@@ -30,6 +30,11 @@ func (env *Environment) assign(name scanner.Token, value any) {
 	panic(&RuntimeError{Message: "assign: undefined variable '" + name.Lexeme + "'", Token: name})
 }
 
+func (env *Environment) assignAt(depth int, name scanner.Token, value any) {
+	e := env.ancestor(depth)
+	e.values[name.Lexeme] = value
+}
+
 func (env *Environment) get(name scanner.Token) any {
 	if value, ok := env.values[name.Lexeme]; ok {
 		return value
@@ -38,4 +43,16 @@ func (env *Environment) get(name scanner.Token) any {
 		return env.enclosing.get(name)
 	}
 	panic(&RuntimeError{Message: "undefined variable '" + name.Lexeme + "'", Token: name})
+}
+
+func (env *Environment) getAt(depth int, name string) any {
+	return env.ancestor(depth).values[name]
+}
+
+func (env *Environment) ancestor(depth int) *Environment {
+	e := env
+	for i := 0; i < depth; i++ {
+		e = env.enclosing
+	}
+	return e
 }

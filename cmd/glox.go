@@ -71,7 +71,7 @@ func runPrompt() {
 			if expr, ok := stmt.(*ast.Expression); ok {
 				fmt.Println(interpreter.Evaluate(expr))
 			} else {
-				interpreter.Interpret([]ast.Stmt{stmt})
+				interpreter.Interpret(&[]ast.Stmt{stmt})
 			}
 			hadError = false
 		}
@@ -88,7 +88,9 @@ func run(source string) {
 		return
 	}
 	interpreter := ast.NewInterpreter(runtimeError)
-	interpreter.Interpret(stmts)
+	resolver := ast.NewResolver(interpreter, report)
+	resolver.Resolve(&stmts)
+	interpreter.Interpret(&stmts)
 }
 
 func runtimeError(err *ast.RuntimeError) {

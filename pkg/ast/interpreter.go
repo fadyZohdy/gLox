@@ -12,15 +12,16 @@ type Interpreter struct {
 	env              *Environment
 	breakEncountered bool
 	returnValue      any
+	locals           map[Expr]int
 }
 
 func NewInterpreter(errorReporter func(error *RuntimeError)) *Interpreter {
-	i := &Interpreter{errorReporter, NewEnvironment(nil), false, nil}
+	i := &Interpreter{errorReporter, NewEnvironment(nil), false, nil, make(map[Expr]int)}
 	i.env.define("clock", &Clock{})
 	return i
 }
 
-func (i *Interpreter) Interpret(stmts []Stmt) (err error) {
+func (i *Interpreter) Interpret(stmts *[]Stmt) (err error) {
 	defer func() {
 		e := recover()
 		if e, ok := e.(*RuntimeError); ok {
@@ -31,7 +32,7 @@ func (i *Interpreter) Interpret(stmts []Stmt) (err error) {
 		}
 	}()
 
-	for _, stmt := range stmts {
+	for _, stmt := range *stmts {
 		i.execute(stmt)
 	}
 
@@ -53,6 +54,10 @@ func (i *Interpreter) Evaluate(expr Expr) any {
 		return nil
 	}
 	return expr.accept(i)
+}
+
+func (i *Interpreter) resolveLocal(expr Expr, depth int) {
+	i.locals[expr] = depth
 }
 
 func (i *Interpreter) VisitLiteralExpr(expr *Literal) any {
@@ -172,11 +177,22 @@ func (i *Interpreter) VisitLogicalExpr(expr *Logical) any {
 }
 
 func (i *Interpreter) VisitVariableExpr(expr *Variable) any {
-	value := i.env.get(expr.name)
-	if value == nil {
-		panic(&RuntimeError{fmt.Sprintf("%s is declared but not initialized", expr.name.Lexeme), expr.name})
+	x := i.lookUpVariable(expr.name, expr)
+	return x
+	// value := i.env.get(expr.name)
+	// if value == nil {
+	// 	panic(&RuntimeError{fmt.Sprintf("%s is declared but not initialized", expr.name.Lexeme), expr.name})
+	// }
+	// return value
+}
+
+func (i *Interpreter) lookUpVariable(name scanner.Token, expr Expr) any {
+	if depth, ok := i.locals[expr]; ok {
+		return i.env.getAt(depth, name.Lexeme)
+	} else {
+		return i.env.get(name)
 	}
-	return value
+
 }
 
 func (i *Interpreter) VisitVarStmt(stmt *Var) any {
@@ -221,7 +237,11 @@ func (i *Interpreter) VisitWhileStmt(stmt *While) any {
 
 func (i *Interpreter) VisitAssignExpr(expr *Assign) any {
 	value := i.Evaluate(expr.value)
-	i.env.assign(expr.name, value)
+	if depth, ok := i.locals[expr]; ok {
+		i.env.assignAt(depth, expr.name, value)
+	} else {
+		i.env.assign(expr.name, value)
+	}
 	return value
 }
 

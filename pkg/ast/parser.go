@@ -3,7 +3,7 @@ package ast
 import (
 	"fmt"
 
-	scanner "github.com/fadyZohdy/gLox/pkg/scanner"
+	"github.com/fadyZohdy/gLox/pkg/scanner"
 )
 
 type Parser struct {
