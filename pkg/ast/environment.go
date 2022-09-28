@@ -52,7 +52,7 @@ func (env *Environment) getAt(depth int, name string) any {
 func (env *Environment) ancestor(depth int) *Environment {
 	e := env
 	for i := 0; i < depth; i++ {
-		e = env.enclosing
+		e = e.enclosing
 	}
 	return e
 }
