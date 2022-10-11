@@ -51,6 +51,10 @@ func (p *Parser) declaration() Stmt {
 		}
 	}()
 
+	if p.match(scanner.CLASS) {
+		return p.classDeclaration()
+	}
+
 	if p.match(scanner.FUN) {
 		return p.function("function", false)
 	}
@@ -59,6 +63,24 @@ func (p *Parser) declaration() Stmt {
 		return p.varDeclaration()
 	}
 	return p.statement()
+}
+
+func (p *Parser) classDeclaration() Stmt {
+	name := p.consume(scanner.IDENTIFIER, "expect class name")
+	p.consume(scanner.LEFT_BRACE, "expect '{' after class name")
+
+	methods := make([]*Function, 0)
+
+	for !p.check(scanner.RIGHT_BRACE) && !p.isAtEnd() {
+		m := p.function("method", false)
+		if function, ok := m.(*Function); ok {
+			methods = append(methods, function)
+		}
+	}
+
+	p.consume(scanner.RIGHT_BRACE, "expect '}' at end of class body")
+
+	return &Class{name, methods}
 }
 
 func (p *Parser) function(kind string, argument bool) Stmt {
@@ -244,18 +266,21 @@ func (p *Parser) expression(args ...bool) Expr {
 
 func (p *Parser) assignment(args ...bool) Expr {
 	var expr Expr
-	// this is a hack to distinguish between block expressions and functions arguments
+	// this is a hack to distinguish between comma block expressions and functions arguments
 	// since both of them use comma as a separator
 	if len(args) > 0 && args[0] {
 		expr = p.ternary()
 	} else {
 		expr = p.comma()
 	}
+
 	if p.match(scanner.EQUAL) {
 		equals := p.previous()
 		right := p.assignment(false)
 		if variable, ok := expr.(*Variable); ok {
 			return &Assign{variable.name, right}
+		} else if get, ok := expr.(*Get); ok {
+			return &Set{object: get.instance, name: get.name, value: right}
 		}
 		p.error_reporter(equals.Line, "", "invalid assignment target")
 	}
@@ -369,6 +394,9 @@ func (p *Parser) call() Expr {
 	for {
 		if p.match(scanner.LEFT_PAREN) {
 			expr = p.finishCall(expr)
+		} else if p.match(scanner.DOT) {
+			name := p.consume(scanner.IDENTIFIER, "expect property name after '.'")
+			expr = &Get{name: name, instance: expr}
 		} else {
 			break
 		}
@@ -418,6 +446,10 @@ func (p *Parser) primary() Expr {
 
 	if p.match(scanner.IDENTIFIER) {
 		return &Variable{p.previous()}
+	}
+
+	if p.match(scanner.THIS) {
+		return &This{p.previous()}
 	}
 
 	if p.match(scanner.LEFT_PAREN) {

@@ -46,6 +46,7 @@ const (
 	OR     = "OR"
 	PRINT  = "PRINT"
 	RETURN = "RETURN"
+	STATIC = "STATIC"
 	SUPER  = "SUPER"
 	THIS   = "THIS"
 	TRUE   = "TRUE"

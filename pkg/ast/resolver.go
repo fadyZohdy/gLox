@@ -6,13 +6,38 @@ import (
 )
 
 type Resolver struct {
-	interpreter    *Interpreter
-	scopes         *stack.Stack[map[string]bool]
-	error_reporter func(int, string, string)
+	interpreter      *Interpreter
+	scopes           *stack.Stack[map[string]bool]
+	error_reporter   func(int, string, string)
+	visitedFunctions *stack.Stack[FunctionType]
+	inClass          bool
 }
 
 func NewResolver(interpreter *Interpreter, error_reporter func(int, string, string)) *Resolver {
-	return &Resolver{interpreter, stack.New[map[string]bool](), error_reporter}
+	return &Resolver{
+		interpreter, stack.New[map[string]bool](), error_reporter, stack.New[FunctionType](), false,
+	}
+}
+
+func (r *Resolver) VisitClassStmt(class *Class) any {
+	r.inClass = true
+	r.declare(class.name)
+	r.define(class.name)
+
+	r.beginScope()
+	scope := r.scopes.Peek()
+	(*scope)["this"] = true
+
+	for _, method := range class.methods {
+		if method.name.Lexeme == "init" {
+			r.resolveFunction(method, CONSTRUCTOR)
+		} else {
+			r.resolveFunction(method, METHOD)
+		}
+	}
+	r.endScope()
+	r.inClass = false
+	return nil
 }
 
 func (r *Resolver) VisitBlockStmt(block *Block) any {
@@ -25,7 +50,6 @@ func (r *Resolver) VisitBlockStmt(block *Block) any {
 /*
 *
 We split binding into two steps, declaring then defining, in order to handle funny edge cases like this:
-
 var a = "outer";
 
 	{
@@ -64,8 +88,7 @@ func (r *Resolver) VisitFunctionStmt(stmt *Function) any {
 	r.declare(stmt.name)
 	r.define(stmt.name)
 
-	r.resolveFunction(stmt)
-
+	r.resolveFunction(stmt, FUNCTION)
 	return nil
 }
 
@@ -102,7 +125,13 @@ func (r *Resolver) VisitBreakStatement(stmt *Break) any {
 }
 
 func (r *Resolver) VisitReturnStmt(stmt *Return) any {
+	if r.visitedFunctions.Len() == 0 {
+		r.error_reporter(stmt.keyword.Line, "", "return outside function body")
+	}
 	if stmt.value != nil {
+		if *r.visitedFunctions.Peek() == CONSTRUCTOR {
+			r.error_reporter(stmt.keyword.Line, "", "can't return a value from an initializer")
+		}
 		r.resolveExpr(stmt.value)
 	}
 
@@ -157,6 +186,25 @@ func (r *Resolver) VisitCallExpr(expr *Call) any {
 	return nil
 }
 
+func (r *Resolver) VisitGetExpr(expr *Get) any {
+	r.resolveExpr(expr.instance)
+	return nil
+}
+
+func (r *Resolver) VisitSetExpr(expr *Set) any {
+	r.resolveExpr(expr.object)
+	r.resolveExpr(expr.value)
+	return nil
+}
+
+func (r *Resolver) VisitThisExpr(expr *This) any {
+	if !r.inClass {
+		r.error_reporter(expr.keyword.Line, "", "can't use 'this' outside of a class")
+	}
+	r.resolveLocal(expr, expr.keyword)
+	return nil
+}
+
 func (r *Resolver) Resolve(stmts *[]Stmt) {
 	for _, stmt := range *stmts {
 		r.resolveStmt(stmt)
@@ -181,7 +229,9 @@ func (r *Resolver) resolveLocal(expr Expr, name scanner.Token) {
 	}
 }
 
-func (r *Resolver) resolveFunction(stmt *Function) {
+func (r *Resolver) resolveFunction(stmt *Function, functionType FunctionType) {
+	r.visitedFunctions.Push(functionType)
+
 	r.beginScope()
 
 	for _, param := range stmt.params {
@@ -189,7 +239,10 @@ func (r *Resolver) resolveFunction(stmt *Function) {
 		r.define(param)
 	}
 	r.Resolve(&stmt.body)
+
 	r.endScope()
+
+	r.visitedFunctions.Pop()
 }
 
 func (r *Resolver) beginScope() {

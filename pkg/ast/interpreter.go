@@ -258,14 +258,39 @@ func (i *Interpreter) VisitCallExpr(expr *Call) any {
 		}
 	}
 
-	if function, ok := callee.(LoxCallable); ok {
-		if len(arguments) != function.arity() {
-			panic(&RuntimeError{fmt.Sprintf("expected %d arguments but got %d", function.arity(), len(arguments)), expr.paren})
+	if callable, ok := callee.(LoxCallable); ok {
+		if len(arguments) != callable.arity() {
+			panic(&RuntimeError{fmt.Sprintf("expected %d arguments but got %d", callable.arity(), len(arguments)), expr.paren})
 		}
-		return function.call(i, arguments)
+		return callable.call(i, arguments)
 	} else {
 		panic(&RuntimeError{"can only call functions or classes", expr.paren})
 	}
+}
+
+func (i *Interpreter) VisitGetExpr(expr *Get) any {
+	instance := i.Evaluate(expr.instance)
+
+	if loxInstance, ok := instance.(*LoxInstance); ok {
+		return loxInstance.get(expr.name)
+	}
+	panic(&RuntimeError{"only instances have properties", expr.name})
+}
+
+func (i *Interpreter) VisitSetExpr(expr *Set) any {
+	instance := i.Evaluate(expr.object)
+
+	if loxInstance, ok := instance.(*LoxInstance); ok {
+		value := i.Evaluate(expr.value)
+		loxInstance.set(expr.name, value)
+		return value
+	}
+
+	panic(&RuntimeError{"only instances have fields", expr.name})
+}
+
+func (i *Interpreter) VisitThisExpr(expr *This) any {
+	return i.lookUpVariable(expr.keyword, expr)
 }
 
 func (i *Interpreter) VisitReturnStmt(stmt *Return) any {
@@ -293,6 +318,22 @@ func (i *Interpreter) VisitBreakStatement(stmt *Break) any {
 func (i *Interpreter) VisitFunctionStmt(stmt *Function) any {
 	f := &LoxFunction{declaration: stmt, closure: i.env}
 	i.env.define(stmt.name.Lexeme, f)
+	return nil
+}
+
+func (i *Interpreter) VisitClassStmt(stmt *Class) any {
+	i.env.define(stmt.name.Lexeme, nil)
+
+	methods := make(map[string]*LoxFunction)
+	for _, method := range stmt.methods {
+		f := &LoxFunction{declaration: method, closure: i.env}
+		methods[method.name.Lexeme] = f
+	}
+
+	loxClass := &LoxClass{name: stmt.name.Lexeme, methods: methods}
+
+	i.env.assign(stmt.name, loxClass)
+
 	return nil
 }
 

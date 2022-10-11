@@ -17,6 +17,10 @@ func (p *AstPrinter) Print(expr Expr) string {
 	return ""
 }
 
+func (p *AstPrinter) VisitClassStmt(stmt *Class) any {
+	return stmt
+}
+
 func (p *AstPrinter) VisitVarStmt(stmt *Var) any {
 	return p.parenthesize(fmt.Sprintf("var %s", stmt.name.Lexeme), stmt.initializer)
 }
@@ -79,6 +83,21 @@ func (p *AstPrinter) VisitCallExpr(expr *Call) any {
 		return p.parenthesize(callee, expr.arguments...)
 	}
 	return ""
+}
+
+func (p *AstPrinter) VisitGetExpr(expr *Get) any {
+	return fmt.Sprintf("%s.%s", expr.instance.accept(p), expr.name.Lexeme)
+}
+
+func (p *AstPrinter) VisitSetExpr(expr *Set) any {
+	return fmt.Sprintf(
+		"%s.%s = %s",
+		expr.object.accept(p), expr.name.Lexeme, expr.value.accept(p),
+	)
+}
+
+func (p *AstPrinter) VisitThisExpr(expr *This) any {
+	return "this"
 }
 
 func (p *AstPrinter) VisitAssignExpr(expr *Assign) any {

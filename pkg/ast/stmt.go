@@ -81,13 +81,14 @@ func (stmt *Break) accept(v Visitor) any {
 }
 
 type Function struct {
-	name   scanner.Token
-	params []scanner.Token
-	body   []Stmt
+	name         scanner.Token
+	params       []scanner.Token
+	body         []Stmt
+	functionType FunctionType
 }
 
-func (stmt *Function) accept(v Visitor) any {
-	return v.VisitFunctionStmt(stmt)
+func (stmt Function) accept(v Visitor) any {
+	return v.VisitFunctionStmt(&stmt)
 }
 
 func (stmt *Function) isAnon() bool {
@@ -101,4 +102,17 @@ type Return struct {
 
 func (stmt *Return) accept(v Visitor) any {
 	return v.VisitReturnStmt(stmt)
+}
+
+type Class struct {
+	name    scanner.Token
+	methods []*Function
+}
+
+func (stmt *Class) accept(v Visitor) any {
+	return v.VisitClassStmt(stmt)
+}
+
+func (c Class) String() string {
+	return fmt.Sprintf("<class %s>", c.name.Lexeme)
 }

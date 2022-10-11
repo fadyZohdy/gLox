@@ -10,6 +10,9 @@ type Visitor interface {
 	VisitAssignExpr(expr *Assign) any
 	VisitLogicalExpr(expr *Logical) any
 	VisitCallExpr(expr *Call) any
+	VisitGetExpr(expr *Get) any
+	VisitSetExpr(expr *Set) any
+	VisitThisExpr(expr *This) any
 
 	VisitVarStmt(stmt *Var) any
 	VisitExpressionStmt(stmt *Expression) any
@@ -20,4 +23,5 @@ type Visitor interface {
 	VisitBreakStatement(stmt *Break) any
 	VisitFunctionStmt(stmt *Function) any
 	VisitReturnStmt(stmt *Return) any
+	VisitClassStmt(stmt *Class) any
 }

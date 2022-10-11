@@ -78,11 +78,38 @@ func (expr *Assign) accept(visitor Visitor) any {
 }
 
 type Call struct {
-	callee   Expr
+	callee    Expr
 	paren     scanner.Token
 	arguments []Expr
 }
 
 func (expr *Call) accept(visitor Visitor) any {
 	return visitor.VisitCallExpr(expr)
+}
+
+type Get struct {
+	instance Expr
+	name     scanner.Token
+}
+
+func (expr *Get) accept(visitor Visitor) any {
+	return visitor.VisitGetExpr(expr)
+}
+
+type Set struct {
+	object Expr
+	name   scanner.Token
+	value  Expr
+}
+
+func (expr *Set) accept(visitor Visitor) any {
+	return visitor.VisitSetExpr(expr)
+}
+
+type This struct {
+	keyword scanner.Token
+}
+
+func (expr *This) accept(visitor Visitor) any {
+	return visitor.VisitThisExpr(expr)
 }
